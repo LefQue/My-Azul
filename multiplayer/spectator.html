@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Azul — Tableau des scores</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  #app{ max-width:720px; }
+  .player-card{ display:flex; gap:14px; align-items:flex-start; }
+  .player-card .wall-grid.mini{ flex:0 0 auto; }
+  .player-card .info{ flex:1; min-width:0; }
+  .winner-crown{ margin-left:6px; }
+  #round-badge{
+    text-align:center; margin:10px auto; width:64px; height:64px; border-radius:50%;
+    background:var(--card); border:2px solid var(--gold); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; box-shadow:0 4px 10px var(--shadow-lift);
+  }
+  #round-badge .rb-num{ font-family:var(--font-display); font-size:1.2rem; color:var(--accent); line-height:1; }
+  #round-badge .rb-label{ font-size:.5rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1 class="wordmark">Azul<span class="wordmark-sub">Tableau des scores</span></h1>
+  <div id="round-badge"><span class="rb-num" id="round-num">–</span><span class="rb-label">Manche</span></div>
+  <div id="players-grid" class="spectator-grid"></div>
+</div>
+
+<script src="vendor/supabase-js.min.js"></script>
+<script src="shared/supabase-config.js"></script>
+<script src="shared/scoring-engine.js"></script>
+<script src="shared/supabase-client.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  const params = new URLSearchParams(window.location.search);
+  const gameId = params.get('game');
+  if (!gameId){
+    document.body.innerHTML = '<p style="padding:20px;">Lien invalide.</p>';
+    return;
+  }
+
+  let players = [];
+  let game = null;
+
+  function hexToRgba(hex, alpha){
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  function tileGloss(hex){
+    return `linear-gradient(160deg, rgba(255,255,255,.4), rgba(255,255,255,0) 45%, rgba(0,0,0,.14)), ${hex}`;
+  }
+
+  function renderMiniWall(wall){
+    return `<div class="wall-grid mini">` + wall.map((rowArr, r) =>
+      rowArr.map((cell, c) => {
+        const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
+        const style = cell !== null
+          ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
+          : `background:${hexToRgba(patternHex,0.16)};`;
+        return `<div class="wall-cell" style="${style}"></div>`;
+      }).join('')
+    ).join('') + `</div>`;
+  }
+
+  function render(){
+    document.getElementById('round-num').textContent = game ? game.current_round : '–';
+
+    const sorted = [...players].sort((a,b) => b.total_score - a.total_score);
+    const maxScore = sorted.length ? sorted[0].total_score : 0;
+    const isEnded = game && game.phase === 'ended';
+
+    document.getElementById('players-grid').innerHTML = sorted.map(p => {
+      const isWinner = isEnded && p.total_score === maxScore;
+      const bonuses = p.final_bonuses;
+      return `<div class="tile-card player-card">
+        ${renderMiniWall(p.wall)}
+        <div class="info">
+          <div class="spectator-player-name">
+            ${p.name || `Siège ${p.slot_index + 1}`}${isWinner ? '<span class="winner-crown">👑</span>' : ''}
+            <span class="spectator-ready-dot ${p.ready ? 'ready' : ''}" title="${p.ready ? 'Prêt' : 'Pas encore prêt'}"></span>
+          </div>
+          <div class="spectator-player-score">${p.total_score} pts</div>
+          ${bonuses ? `<div style="clear:both; color:var(--muted); font-size:.78rem; margin-top:4px;">
+            Bonus : ${bonuses.rows} ligne(s), ${bonuses.cols} colonne(s), ${bonuses.colors} couleur(s) (+${bonuses.bonusPoints})
+          </div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function init(){
+    game = await fetchGameById(gameId);
+    players = await fetchPlayers(gameId);
+    render();
+
+    subscribeToGame(gameId, {
+      onGameChange: (g) => { game = g; render(); },
+      onPlayerChange: (eventType, p) => {
+        const idx = players.findIndex(pl => pl.id === p.id);
+        if (idx >= 0) players[idx] = p; else players.push(p);
+        render();
+      },
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

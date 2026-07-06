@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test synchro Supabase</title>
+<style>
+  body{ font-family:-apple-system,sans-serif; max-width:480px; margin:20px auto; padding:0 16px; }
+  button{ font-size:1.1rem; padding:10px 16px; margin:6px 4px; }
+  #log{ background:#111; color:#0f0; font-family:monospace; font-size:.8rem; padding:10px; height:300px; overflow:auto; white-space:pre-wrap; }
+  #counter{ font-size:3rem; text-align:center; }
+  input{ font-size:1rem; padding:6px; width:100%; box-sizing:border-box; margin:6px 0; }
+</style>
+</head>
+<body>
+<h1>Harnais de test — synchro temps réel</h1>
+<p>Ouvre cette page dans 2 onglets/appareils différents avec le même code de test, puis tape "+1" dans l'un et vérifie que l'autre se met à jour tout seul.</p>
+
+<label>Code de test (partagé entre les onglets) : <input id="test-code" value="TESTSYNC"></label>
+<button id="btn-join-test">Rejoindre ce test</button>
+
+<div id="counter">–</div>
+<button id="btn-increment">+1</button>
+
+<h2>Test "Prêt" / résolution de manche</h2>
+<button id="btn-ready">Se marquer "Prêt"</button>
+<div id="ready-status"></div>
+
+<h2>Log</h2>
+<div id="log"></div>
+
+<script src="vendor/supabase-js.min.js"></script>
+<script src="shared/supabase-config.js"></script>
+<script src="shared/scoring-engine.js"></script>
+<script src="shared/supabase-client.js"></script>
+<script>
+  let testGameId = null;
+  let testPlayerId = null;
+  let unsubscribe = null;
+
+  function log(msg){
+    const el = document.getElementById('log');
+    el.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // Pour ce harnais, "counter" est stocké dans total_score d'un joueur factice (pas de vraie
+  // logique Azul ici, juste pour prouver que la plomberie Realtime fonctionne).
+  async function ensureTestGame(code){
+    let game = await fetchGameByJoinCode(code);
+    if (!game){
+      log(`Partie de test "${code}" introuvable, création...`);
+      // phase='playing' directement : ce harnais n'a pas de vrai flux lobby, contrairement à host.html
+      const { data, error } = await azulSupabase.from('games')
+        .insert({ join_code: code, max_players: 2, phase: 'playing' }).select().single();
+      if (error){ log('Erreur création: ' + error.message); throw error; }
+      game = data;
+      const { error: pErr } = await azulSupabase.from('players')
+        .insert([{ game_id: game.id, slot_index: 0 }, { game_id: game.id, slot_index: 1 }]);
+      if (pErr){ log('Erreur création joueurs: ' + pErr.message); throw pErr; }
+      log('Partie de test créée: ' + game.id);
+    } else {
+      log('Partie de test existante trouvée: ' + game.id);
+    }
+    return game;
+  }
+
+  async function joinTest(){
+    const code = document.getElementById('test-code').value.trim().toUpperCase();
+    const game = await ensureTestGame(code);
+    testGameId = game.id;
+
+    const deviceId = getOrCreateDeviceId();
+    const players = await fetchPlayers(testGameId);
+    let mine = players.find(p => p.claimed_by_device_id === deviceId);
+    if (!mine){
+      mine = players.find(p => !p.claimed_by_device_id);
+      if (mine){
+        const claimed = await claimSlot(mine.id, 'Testeur', deviceId);
+        if (claimed) mine = claimed;
+      }
+    }
+    if (!mine){ log('Aucun siège disponible dans ce test.'); return; }
+    testPlayerId = mine.id;
+    document.getElementById('counter').textContent = mine.total_score;
+    document.getElementById('ready-status').textContent = mine.ready ? 'Tu es prêt.' : 'Pas encore prêt.';
+    log(`Rejoint en tant que joueur ${testPlayerId} (siège ${mine.slot_index})`);
+
+    if (unsubscribe) unsubscribe();
+    unsubscribe = subscribeToGame(testGameId, {
+      onGameChange: (g) => log(`[jeu] phase=${g.phase} round=${g.current_round}`),
+      onPlayerChange: (eventType, p) => {
+        log(`[joueur ${p.slot_index}] ${eventType} — score=${p.total_score} ready=${p.ready}`);
+        if (p.id === testPlayerId){
+          document.getElementById('counter').textContent = p.total_score;
+          document.getElementById('ready-status').textContent = p.ready ? 'Tu es prêt.' : 'Pas encore prêt.';
+        }
+      },
+    });
+    log('Abonné aux changements temps réel.');
+  }
+
+  async function increment(){
+    if (!testPlayerId){ log('Rejoins le test d\'abord.'); return; }
+    const players = await fetchPlayers(testGameId);
+    const mine = players.find(p => p.id === testPlayerId);
+    const { error } = await azulSupabase.from('players')
+      .update({ total_score: mine.total_score + 1 }).eq('id', testPlayerId);
+    if (error) log('Erreur increment: ' + error.message);
+  }
+
+  async function markReady(){
+    if (!testPlayerId){ log('Rejoins le test d\'abord.'); return; }
+    log('Marquage "prêt"...');
+    const game = await fetchGameById(testGameId);
+    await toggleReady(testGameId, testPlayerId, true, game.current_round);
+    log('RPC try_claim_round_resolution appelé (voir log [jeu] pour le résultat).');
+  }
+
+  function withErrorLogging(fn, label){
+    return async () => {
+      try{
+        await fn();
+      }catch(e){
+        log(`❌ ERREUR (${label}): ${e && e.message ? e.message : e}`);
+        console.error(label, e);
+      }
+    };
+  }
+
+  window.addEventListener('unhandledrejection', (e) => {
+    log(`❌ Erreur non interceptée: ${e.reason && e.reason.message ? e.reason.message : e.reason}`);
+    console.error('unhandledrejection', e.reason);
+  });
+
+  document.getElementById('btn-join-test').addEventListener('click', withErrorLogging(joinTest, 'rejoindre'));
+  document.getElementById('btn-increment').addEventListener('click', withErrorLogging(increment, 'incrementer'));
+  document.getElementById('btn-ready').addEventListener('click', withErrorLogging(markReady, 'pret'));
+</script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Azul — Mon plateau</title>
+<link rel="stylesheet" href="shared/style.css">
+<style>
+  #round-badge{
+    text-align:center; margin:10px auto; width:64px; height:64px; border-radius:50%;
+    background:var(--card); border:2px solid var(--gold); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; box-shadow:0 4px 10px var(--shadow-lift);
+  }
+  #round-badge .rb-num{ font-family:var(--font-display); font-size:1.2rem; color:var(--accent); line-height:1; }
+  #round-badge .rb-label{ font-size:.5rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  #actions{ display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1 class="wordmark" id="player-name-header">Azul</h1>
+  <div id="round-badge"><span class="rb-num" id="round-num">–</span><span class="rb-label">Manche</span></div>
+
+  <div id="board" class="tile-card"></div>
+
+  <div id="actions">
+    <button id="btn-ready" class="btn ready">Je suis prêt pour cette manche</button>
+    <button id="btn-spectate" class="btn">Voir tous les joueurs</button>
+    <button id="btn-end-game" class="btn accent2">Fin de partie</button>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script src="vendor/supabase-js.min.js"></script>
+<script src="shared/supabase-config.js"></script>
+<script src="shared/scoring-engine.js"></script>
+<script src="shared/supabase-client.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  const params = new URLSearchParams(window.location.search);
+  const gameId = params.get('game');
+  const playerId = params.get('player');
+  if (!gameId || !playerId){
+    document.body.innerHTML = '<p style="padding:20px;">Lien invalide — rejoins une partie depuis join.html.</p>';
+    return;
+  }
+
+  let myRow = null;   // dernière ligne Supabase connue (snake_case)
+  let myGame = null;
+  let toastTimer = null;
+  let unsubscribe = null;
+
+  function showToast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  function hexToRgba(hex, alpha){
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  function tileGloss(hex){
+    return `linear-gradient(160deg, rgba(255,255,255,.4), rgba(255,255,255,0) 45%, rgba(0,0,0,.14)), ${hex}`;
+  }
+
+  async function updateMyRow(patch){
+    const { error } = await azulSupabase.from('players').update(patch).eq('id', playerId);
+    if (error){ showToast('Erreur de synchronisation : ' + error.message); console.error(error); }
+    // pas de rendu local ici : le rendu se fait uniquement via l'écho temps réel (voir plan)
+  }
+
+  function addFloorTile(row){ return Math.min(row.floor_filled + 1, FLOOR_PENALTIES.length); }
+
+  async function tapColor(rowIndex, colorId){
+    const line = myRow.pattern_lines[rowIndex];
+
+    if (line.count === line.capacity && line.color !== null){
+      showToast(`Ligne ${rowIndex+1} déjà pleine : tuile envoyée au plancher.`);
+      await updateMyRow({ floor_filled: addFloorTile(myRow) });
+      return;
+    }
+
+    const col = wallColumnFor(rowIndex, colorId);
+    if (myRow.wall[rowIndex][col] !== null){
+      showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur.`);
+    }
+    const newLines = myRow.pattern_lines.map((l, i) => i !== rowIndex ? l : (
+      (l.color !== null && l.color !== colorId)
+        ? { ...l, color: colorId, count: 1 }
+        : { ...l, color: colorId, count: l.count + 1 }
+    ));
+    await updateMyRow({ pattern_lines: newLines });
+  }
+
+  async function tapSlots(rowIndex){
+    const line = myRow.pattern_lines[rowIndex];
+    if (line.count <= 0) return;
+    const newCount = line.count - 1;
+    const newLines = myRow.pattern_lines.map((l, i) => i !== rowIndex ? l :
+      { ...l, count: newCount, color: newCount === 0 ? null : l.color });
+    await updateMyRow({ pattern_lines: newLines });
+  }
+
+  async function tapFloorSlot(i){
+    const newFilled = (i < myRow.floor_filled) ? i : i + 1;
+    await updateMyRow({ floor_filled: newFilled });
+  }
+
+  async function toggleMarker(checked){
+    if (checked){
+      await updateMyRow({ has_first_player_marker: true, floor_filled: addFloorTile(myRow) });
+    } else {
+      await updateMyRow({ has_first_player_marker: false, floor_filled: Math.max(myRow.floor_filled - 1, 0) });
+    }
+  }
+
+  function renderBoard(){
+    document.getElementById('player-name-header').textContent = myRow.name || 'Azul';
+
+    const patternHtml = myRow.pattern_lines.map((line, row) => {
+      const slots = Array.from({length:line.capacity}, (_, i) => {
+        const filled = i < line.count;
+        return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}"></div>`;
+      }).join('');
+      const swatches = COLORS.map(c => {
+        const col = wallColumnFor(row, c.id);
+        const disabledHint = myRow.wall[row][col] !== null;
+        return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}"></button>`;
+      }).join('');
+      return `<div class="pattern-row">
+        <div class="pl-slots" data-row="${row}">${slots}</div>
+        <div class="pl-palette">${swatches}</div>
+      </div>`;
+    }).join('');
+
+    const wallHtml = `<div class="wall-grid">` + myRow.wall.map((rowArr, r) =>
+      rowArr.map((cell, c) => {
+        const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
+        const style = cell !== null
+          ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
+          : `background:${hexToRgba(patternHex,0.16)}; border:1px dashed ${hexToRgba(patternHex,0.45)};`;
+        return `<div class="wall-cell" style="${style}"></div>`;
+      }).join('')
+    ).join('') + `</div>`;
+
+    const floorHtml = `<div class="floor-line">` + FLOOR_PENALTIES.map((pen, i) => {
+      const filled = i < myRow.floor_filled;
+      return `<div class="floor-slot ${filled?'filled':''}" data-idx="${i}">${pen}</div>`;
+    }).join('') + `</div>
+      <label class="marker-toggle"><input type="checkbox" id="marker-checkbox" ${myRow.has_first_player_marker?'checked':''}/> Jeton premier joueur</label>`;
+
+    document.getElementById('board').innerHTML = `
+      <h2>Lignes de motifs</h2>
+      ${patternHtml}
+      <h2>Mur</h2>
+      ${wallHtml}
+      <h2>Ligne de plancher</h2>
+      ${floorHtml}
+      <p class="score-line">Score total : <strong>${myRow.total_score}</strong></p>
+    `;
+
+    document.querySelectorAll('.swatch').forEach(btn => {
+      btn.addEventListener('click', () => tapColor(parseInt(btn.dataset.row,10), btn.dataset.color));
+    });
+    document.querySelectorAll('.pl-slots').forEach(el => {
+      el.addEventListener('click', () => tapSlots(parseInt(el.dataset.row,10)));
+    });
+    document.querySelectorAll('.floor-slot').forEach(el => {
+      el.addEventListener('click', () => tapFloorSlot(parseInt(el.dataset.idx,10)));
+    });
+    document.getElementById('marker-checkbox').addEventListener('change', (e) => toggleMarker(e.target.checked));
+
+    const btnReady = document.getElementById('btn-ready');
+    btnReady.textContent = myRow.ready ? 'Prêt ✓ (retirer)' : 'Je suis prêt pour cette manche';
+    btnReady.classList.toggle('is-ready', myRow.ready);
+  }
+
+  async function onReadyClick(){
+    try{
+      await toggleReady(gameId, playerId, !myRow.ready, myGame.current_round);
+    }catch(e){
+      showToast('Erreur : ' + (e.message || e));
+      console.error(e);
+    }
+  }
+
+  async function onEndGameClick(){
+    if (!confirm('Terminer la partie et calculer les bonus finaux pour tout le monde ?')) return;
+    try{
+      await endGame(gameId);
+      window.location.href = `spectator.html?game=${gameId}`;
+    }catch(e){
+      showToast('Erreur : ' + (e.message || e));
+      console.error(e);
+    }
+  }
+
+  async function init(){
+    myGame = await fetchGameById(gameId);
+    document.getElementById('round-num').textContent = myGame.current_round;
+
+    const players = await fetchPlayers(gameId);
+    myRow = players.find(p => p.id === playerId);
+    if (!myRow){
+      document.body.innerHTML = '<p style="padding:20px;">Joueur introuvable dans cette partie.</p>';
+      return;
+    }
+    renderBoard();
+
+    unsubscribe = subscribeToGame(gameId, {
+      onGameChange: (g) => {
+        myGame = g;
+        document.getElementById('round-num').textContent = g.current_round;
+        if (g.phase === 'ended') window.location.href = `spectator.html?game=${gameId}`;
+      },
+      onPlayerChange: (eventType, p) => {
+        if (p.id !== playerId) return;
+        myRow = p;
+        renderBoard();
+      },
+    });
+  }
+
+  document.getElementById('btn-ready').addEventListener('click', onReadyClick);
+  document.getElementById('btn-end-game').addEventListener('click', onEndGameClick);
+  document.getElementById('btn-spectate').addEventListener('click', () => {
+    window.location.href = `spectator.html?game=${gameId}`;
+  });
+
+  window.addEventListener('unhandledrejection', (e) => {
+    const msg = e.reason && e.reason.message ? e.reason.message : e.reason;
+    showToast('Erreur : ' + msg);
+    console.error(e.reason);
+  });
+
+  init();
+})();
+</script>
+</body>
+</html>

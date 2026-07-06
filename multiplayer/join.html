@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Azul — Rejoindre une partie</title>
+<link rel="stylesheet" href="shared/style.css">
+</head>
+<body>
+<div id="app">
+  <h1 class="wordmark">Azul<span class="wordmark-sub">Rejoindre</span></h1>
+
+  <section id="screen-enter-code">
+    <div class="tile-card">
+      <p>Code de la partie</p>
+      <input type="text" id="join-code-input" placeholder="ex: AB12CD" style="text-transform:uppercase;">
+      <button id="btn-find-game" class="btn primary" style="margin-top:10px;">Rejoindre</button>
+    </div>
+  </section>
+
+  <section id="screen-pick-seat" style="display:none">
+    <div class="tile-card">
+      <p>Choisis ton siège</p>
+      <div id="seat-list" class="seat-list"></div>
+    </div>
+    <div class="tile-card" id="name-card" style="display:none">
+      <p id="picked-seat-label"></p>
+      <input type="text" id="name-input" placeholder="Ton prénom">
+      <button id="btn-claim" class="btn primary" style="margin-top:10px;">C'est moi !</button>
+    </div>
+  </section>
+</div>
+<div id="toast" class="toast"></div>
+
+<script src="vendor/supabase-js.min.js"></script>
+<script src="shared/supabase-config.js"></script>
+<script src="shared/scoring-engine.js"></script>
+<script src="shared/supabase-client.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  let currentGame = null;
+  let players = [];
+  let pickedSlotId = null;
+  let toastTimer = null;
+
+  function showToast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  function escapeHtmlLocal(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function renderSeats(){
+    const el = document.getElementById('seat-list');
+    el.innerHTML = players.map(p => `
+      <div class="seat-row ${p.claimed_by_device_id ? 'claimed' : ''}">
+        <span class="${p.name ? 'seat-name' : 'seat-empty'}">${p.name ? escapeHtmlLocal(p.name) : `Siège ${p.slot_index + 1} (libre)`}</span>
+        ${p.claimed_by_device_id ? '' : `<button data-id="${p.id}">Choisir</button>`}
+      </div>
+    `).join('');
+    el.querySelectorAll('button[data-id]').forEach(btn => {
+      btn.addEventListener('click', () => pickSeat(btn.dataset.id));
+    });
+  }
+
+  function pickSeat(slotId){
+    pickedSlotId = slotId;
+    const slot = players.find(p => p.id === slotId);
+    document.getElementById('picked-seat-label').textContent = `Siège ${slot.slot_index + 1} — quel est ton prénom ?`;
+    document.getElementById('name-card').style.display = 'block';
+    document.getElementById('name-input').focus();
+  }
+
+  async function findGame(){
+    const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+    if (!code){ showToast('Entre un code de partie.'); return; }
+    try{
+      const game = await fetchGameByJoinCode(code);
+      if (!game){ showToast('Aucune partie avec ce code.'); return; }
+      currentGame = game;
+
+      const deviceId = getOrCreateDeviceId();
+      players = await fetchPlayers(game.id);
+      const mine = players.find(p => p.claimed_by_device_id === deviceId);
+      if (mine){
+        goToPlayer(game.id, mine.id);
+        return;
+      }
+
+      document.getElementById('screen-enter-code').style.display = 'none';
+      document.getElementById('screen-pick-seat').style.display = 'block';
+      renderSeats();
+    }catch(e){
+      showToast('Erreur : ' + (e.message || e));
+      console.error(e);
+    }
+  }
+
+  async function claimFlow(){
+    const name = document.getElementById('name-input').value.trim();
+    if (!name){ showToast('Entre ton prénom.'); return; }
+    try{
+      const deviceId = getOrCreateDeviceId();
+      const claimed = await claimSlot(pickedSlotId, name, deviceId);
+      if (!claimed){
+        showToast('Ce siège vient d\'être pris, choisis-en un autre.');
+        players = await fetchPlayers(currentGame.id);
+        renderSeats();
+        document.getElementById('name-card').style.display = 'none';
+        return;
+      }
+      goToPlayer(currentGame.id, claimed.id);
+    }catch(e){
+      showToast('Erreur : ' + (e.message || e));
+      console.error(e);
+    }
+  }
+
+  function goToPlayer(gameId, playerId){
+    window.location.href = `player.html?game=${gameId}&player=${playerId}`;
+  }
+
+  // Pré-remplit le code si on arrive via le QR (?game=<code>)
+  const params = new URLSearchParams(window.location.search);
+  const prefilled = params.get('game');
+  if (prefilled) document.getElementById('join-code-input').value = prefilled.toUpperCase();
+
+  document.getElementById('btn-find-game').addEventListener('click', findGame);
+  document.getElementById('btn-claim').addEventListener('click', claimFlow);
+
+  window.addEventListener('unhandledrejection', (e) => {
+    showToast('Erreur : ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    console.error(e.reason);
+  });
+})();
+</script>
+</body>
+</html>

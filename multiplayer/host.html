@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Azul — Créer une partie</title>
+<link rel="stylesheet" href="shared/style.css">
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-setup">
+    <h1 class="wordmark">Azul<span class="wordmark-sub">Nouvelle partie</span></h1>
+    <div class="tile-card">
+      <p>Nombre de joueurs</p>
+      <div id="player-count-selector" style="display:flex; gap:8px; margin:8px 0 16px;"></div>
+      <button id="btn-create" class="btn primary">Créer la partie</button>
+    </div>
+  </section>
+
+  <section id="screen-lobby" style="display:none">
+    <h1 class="wordmark">Azul<span class="wordmark-sub">Salon d'attente</span></h1>
+    <div class="tile-card">
+      <div class="join-code" id="join-code-display"></div>
+      <div id="qr-container"></div>
+      <p style="text-align:center; color:var(--muted); font-size:.82rem;">
+        Les autres joueurs scannent ce QR code (ou vont sur cette page et tapent le code) pour rejoindre.
+      </p>
+    </div>
+    <h2>Joueurs</h2>
+    <div class="tile-card">
+      <div id="seat-list" class="seat-list"></div>
+    </div>
+    <button id="btn-start" class="btn primary">Démarrer la partie</button>
+    <button id="btn-spectate" class="btn" style="margin-top:8px;">Ouvrir la vue spectateur</button>
+  </section>
+
+</div>
+<div id="toast" class="toast"></div>
+
+<script src="vendor/supabase-js.min.js"></script>
+<script src="vendor/qrcode-generator.min.js"></script>
+<script src="shared/supabase-config.js"></script>
+<script src="shared/scoring-engine.js"></script>
+<script src="shared/supabase-client.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  let selectedCount = 4;
+  let currentGame = null;
+  let unsubscribe = null;
+  let toastTimer = null;
+
+  function showToast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  function showScreen(id){
+    ['screen-setup','screen-lobby'].forEach(s => {
+      document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
+    });
+  }
+
+  function renderPlayerCountSelector(){
+    const el = document.getElementById('player-count-selector');
+    el.innerHTML = '';
+    [2,3,4].forEach(n => {
+      const btn = document.createElement('button');
+      btn.textContent = n;
+      btn.className = 'btn' + (n === selectedCount ? ' primary' : '');
+      btn.style.flex = '1';
+      btn.addEventListener('click', () => { selectedCount = n; renderPlayerCountSelector(); });
+      el.appendChild(btn);
+    });
+  }
+
+  function renderQr(joinCode){
+    const qr = qrcode(0, 'M');
+    const joinUrl = new URL(`join.html?game=${joinCode}`, window.location.href).href;
+    qr.addData(joinUrl);
+    qr.make();
+    document.getElementById('qr-container').innerHTML = qr.createSvgTag(4);
+  }
+
+  function renderSeats(players){
+    const el = document.getElementById('seat-list');
+    el.innerHTML = players.map(p => `
+      <div class="seat-row ${p.claimed_by_device_id ? 'claimed' : ''}">
+        <span class="${p.name ? 'seat-name' : 'seat-empty'}">${p.name ? escapeHtmlLocal(p.name) : 'siège libre'}</span>
+        <span>${p.claimed_by_device_id ? '✅' : '…'}</span>
+      </div>
+    `).join('');
+    const claimedCount = players.filter(p => p.claimed_by_device_id).length;
+    document.getElementById('btn-start').disabled = claimedCount < 2;
+    document.getElementById('btn-start').textContent = claimedCount < 2
+      ? 'Démarrer la partie (2 joueurs min.)'
+      : 'Démarrer la partie';
+  }
+
+  function escapeHtmlLocal(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function createGameFlow(){
+    try{
+      currentGame = await createGame(selectedCount);
+      document.getElementById('join-code-display').textContent = currentGame.join_code;
+      renderQr(currentGame.join_code);
+      showScreen('screen-lobby');
+
+      const players = await fetchPlayers(currentGame.id);
+      renderSeats(players);
+
+      if (unsubscribe) unsubscribe();
+      unsubscribe = subscribeToGame(currentGame.id, {
+        onPlayerChange: async () => renderSeats(await fetchPlayers(currentGame.id)),
+      });
+    }catch(e){
+      showToast('Erreur création de partie : ' + (e.message || e));
+      console.error(e);
+    }
+  }
+
+  async function startGameFlow(){
+    try{
+      await azulSupabase.from('games').update({ phase: 'playing' }).eq('id', currentGame.id);
+      showToast('Partie démarrée !');
+      window.location.href = `spectator.html?game=${currentGame.id}`;
+    }catch(e){
+      showToast('Erreur au démarrage : ' + (e.message || e));
+      console.error(e);
+    }
+  }
+
+  renderPlayerCountSelector();
+  document.getElementById('btn-create').addEventListener('click', createGameFlow);
+  document.getElementById('btn-start').addEventListener('click', startGameFlow);
+  document.getElementById('btn-spectate').addEventListener('click', () => {
+    if (currentGame) window.location.href = `spectator.html?game=${currentGame.id}`;
+  });
+
+  window.addEventListener('unhandledrejection', (e) => {
+    showToast('Erreur : ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    console.error(e.reason);
+  });
+})();
+</script>
+</body>
+</html>
