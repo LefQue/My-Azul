@@ -20,6 +20,10 @@
 <div id="app">
   <h1 class="wordmark" id="player-name-header">Azul</h1>
   <div id="round-badge"><span class="rb-num" id="round-num">–</span><span class="rb-label">Manche</span></div>
+  <div id="cnn-status-row">
+    <span id="cnn-status-badge" class="cnn-status loading">⏳ Modèle : chargement...</span>
+    <button id="btn-cnn-retry">Réessayer</button>
+  </div>
 
   <div id="board" class="tile-card"></div>
 
@@ -31,9 +35,42 @@
 </div>
 <div id="toast" class="toast"></div>
 
+<input type="file" id="scan-file-input" accept="image/*" capture="environment" style="display:none">
+
+<div id="scan-overlay">
+  <div id="scan-step-calibrate" class="scan-step">
+    <p class="scan-title">Cadrer les lignes de motifs</p>
+    <p class="scan-hint">Place les 4 repères sur les coins du triangle : d'abord les 2 coins côté ligne courte, puis les 2 coins côté ligne longue (celle proche du mur).</p>
+    <div id="scan-calib-wrap">
+      <canvas id="scan-canvas"></canvas>
+      <div class="scan-handle" id="scan-handle-0" data-idx="0"></div>
+      <div class="scan-handle" id="scan-handle-1" data-idx="1"></div>
+      <div class="scan-handle" id="scan-handle-2" data-idx="2"></div>
+      <div class="scan-handle" id="scan-handle-3" data-idx="3"></div>
+    </div>
+    <div class="scan-actions">
+      <button id="btn-scan-cancel-1" class="danger">Annuler</button>
+      <button id="btn-scan-validate" class="primary">Valider le cadrage</button>
+    </div>
+  </div>
+
+  <div id="scan-step-confirm" class="scan-step">
+    <p class="scan-title">Vérifier la lecture</p>
+    <p class="scan-hint">Corrige au besoin avant de confirmer : rien n'est encore enregistré.</p>
+    <div id="scan-confirm-rows"></div>
+    <div class="scan-actions">
+      <button id="btn-scan-cancel-2" class="danger">Annuler</button>
+      <button id="btn-scan-retake">Reprendre la photo</button>
+      <button id="btn-scan-confirm" class="primary">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script src="../version_ia/tfjs/tf.min.js"></script>
 <script src="vendor/supabase-js.min.js"></script>
 <script src="shared/supabase-config.js"></script>
 <script src="shared/scoring-engine.js"></script>
+<script src="shared/scan-pipeline.js"></script>
 <script src="shared/supabase-client.js"></script>
 <script>
 (function(){
@@ -155,7 +192,10 @@
       <label class="marker-toggle"><input type="checkbox" id="marker-checkbox" ${myRow.has_first_player_marker?'checked':''}/> Jeton premier joueur</label>`;
 
     document.getElementById('board').innerHTML = `
-      <h2>Lignes de motifs</h2>
+      <div class="section-header">
+        <h2>Lignes de motifs</h2>
+        <button id="btn-scan-lines">📷 Scanner</button>
+      </div>
       ${patternHtml}
       <h2>Mur</h2>
       ${wallHtml}
@@ -174,6 +214,7 @@
       el.addEventListener('click', () => tapFloorSlot(parseInt(el.dataset.idx,10)));
     });
     document.getElementById('marker-checkbox').addEventListener('change', (e) => toggleMarker(e.target.checked));
+    document.getElementById('btn-scan-lines').addEventListener('click', () => openScanOverlay());
 
     const btnReady = document.getElementById('btn-ready');
     btnReady.textContent = myRow.ready ? 'Prêt ✓ (retirer)' : 'Je suis prêt pour cette manche';
@@ -198,6 +239,193 @@
       showToast('Erreur : ' + (e.message || e));
       console.error(e);
     }
+  }
+
+  // ---------- scan CNN (repris de version_ia/index-scan-cnn.html) ----------
+  let scanState = null;
+
+  function updateCnnStatusBadge(state, detail){
+    const el = document.getElementById('cnn-status-badge');
+    const row = document.getElementById('cnn-status-row');
+    if (!el || !row) return;
+    row.classList.toggle('show-retry', state === 'error');
+    if (state === 'loading'){ el.textContent = '⏳ Modèle : chargement...'; el.className = 'cnn-status loading'; el.title = ''; }
+    else if (state === 'ready'){ el.textContent = '✅ Modèle prêt'; el.className = 'cnn-status ready'; el.title = ''; }
+    else {
+      el.textContent = '⚠️ Modèle introuvable (touche pour le détail)';
+      el.className = 'cnn-status error';
+      el.title = detail || '';
+      el.onclick = () => alert(detail || 'Aucun détail disponible.');
+    }
+  }
+
+  function openScanOverlay(){
+    scanState = { sourceCanvas: null, corners: null, confirmRows: null };
+    document.getElementById('scan-overlay').classList.add('open');
+    document.getElementById('scan-file-input').click();
+  }
+
+  function closeScanOverlay(){
+    document.getElementById('scan-overlay').classList.remove('open');
+    document.querySelectorAll('.scan-step').forEach(s => s.classList.remove('active'));
+    scanState = null;
+  }
+
+  function showScanStep(id){
+    document.querySelectorAll('.scan-step').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function handleScanFile(file){
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e) => { img.src = e.target.result; };
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      const scale = Math.min(1, SCAN_MAX_DIM / Math.max(w, h));
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      const canvas = document.getElementById('scan-canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      scanState.sourceCanvas = canvas;
+      showScanStep('scan-step-calibrate');
+      placeDefaultHandles();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function placeDefaultHandles(){
+    const wrap = document.getElementById('scan-calib-wrap');
+    const rect = document.getElementById('scan-canvas').getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const offX = rect.left - wrapRect.left, offY = rect.top - wrapRect.top;
+    const insets = [[.22,.15],[.78,.15],[.78,.9],[.22,.9]];
+    scanState.corners = insets.map(([fx,fy]) => ({ x: offX + fx*rect.width, y: offY + fy*rect.height }));
+    scanState.corners.forEach((pt, i) => {
+      const el = document.getElementById('scan-handle-' + i);
+      el.style.left = pt.x + 'px'; el.style.top = pt.y + 'px';
+    });
+  }
+
+  function wireScanHandleDragging(){
+    let dragIdx = null;
+    document.querySelectorAll('.scan-handle').forEach(el => {
+      el.addEventListener('pointerdown', (e) => {
+        dragIdx = parseInt(el.dataset.idx, 10);
+        el.setPointerCapture(e.pointerId);
+      });
+    });
+    document.getElementById('scan-calib-wrap').addEventListener('pointermove', (e) => {
+      if (dragIdx === null || !scanState) return;
+      const wrapRect = document.getElementById('scan-calib-wrap').getBoundingClientRect();
+      const x = e.clientX - wrapRect.left, y = e.clientY - wrapRect.top;
+      scanState.corners[dragIdx] = { x, y };
+      const el = document.getElementById('scan-handle-' + dragIdx);
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+    });
+    ['pointerup','pointercancel'].forEach(evt => {
+      document.getElementById('scan-calib-wrap').addEventListener(evt, () => { dragIdx = null; });
+    });
+  }
+
+  function validateScanCalibration(){
+    const canvas = scanState.sourceCanvas;
+    const rect = canvas.getBoundingClientRect();
+    const wrap = document.getElementById('scan-calib-wrap');
+    const wrapRect = wrap.getBoundingClientRect();
+    const offX = rect.left - wrapRect.left, offY = rect.top - wrapRect.top;
+    const scale = canvas.width / rect.width;
+    const photoPts = scanState.corners.map(pt => ({
+      x: (pt.x - offX) * scale,
+      y: (pt.y - offY) * scale,
+    }));
+    const H = solveHomography(SCAN_CANONICAL_PTS, photoPts);
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    if (!cnnModel){
+      showToast(cnnModelError
+        ? "Modèle CNN introuvable — réessaie via le badge en haut de l'écran."
+        : "Modèle CNN en cours de chargement, réessaie dans un instant.");
+      closeScanOverlay();
+      return;
+    }
+
+    scanState.confirmRows = runScanPipeline(imageData, H);
+    showScanStep('scan-step-confirm');
+    renderScanConfirm();
+  }
+
+  function renderScanConfirm(){
+    const el = document.getElementById('scan-confirm-rows');
+    el.innerHTML = scanState.confirmRows.map((row, r) => {
+      const capacity = r + 1;
+      const slots = Array.from({length:capacity}, (_, i) => {
+        const filled = i < row.count;
+        return `<div class="scr-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[row.color].hex)}` : ''}"></div>`;
+      }).join('');
+      const palette = COLORS.map(c =>
+        `<button style="background:${tileGloss(c.hex)}" data-row="${r}" data-color="${c.id}" title="${c.label}"></button>`
+      ).join('');
+      return `<div class="scan-confirm-row ${row.anomaly?'anomaly':''}" data-row="${r}">
+        <div class="scr-slots">${slots}</div>
+        <div class="scr-palette">${palette}</div>
+        <div class="scr-count">
+          <button data-row="${r}" data-act="dec">−</button>${row.count}<button data-row="${r}" data-act="inc">+</button>
+        </div>
+        ${row.anomaly ? `<div class="scan-anomaly-note">⚠ lecture incertaine sur cette ligne — vérifie-la</div>` : ''}
+      </div>`;
+    }).join('');
+
+    el.querySelectorAll('.scr-palette button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const r = parseInt(btn.dataset.row, 10);
+        const row = scanState.confirmRows[r];
+        row.color = btn.dataset.color;
+        if (row.count === 0) row.count = 1;
+        row.anomaly = false;
+        renderScanConfirm();
+      });
+    });
+    el.querySelectorAll('.scr-count button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const r = parseInt(btn.dataset.row, 10);
+        const row = scanState.confirmRows[r];
+        const capacity = r + 1;
+        if (btn.dataset.act === 'inc') row.count = Math.min(capacity, row.count + 1);
+        else row.count = Math.max(0, row.count - 1);
+        if (row.count === 0) row.color = null;
+        else if (row.color === null) row.color = COLORS[0].id;
+        row.anomaly = false;
+        renderScanConfirm();
+      });
+    });
+  }
+
+  async function commitScanResult(){
+    const newLines = scanState.confirmRows.map((row, i) =>
+      ({ capacity: i+1, color: row.count > 0 ? row.color : null, count: row.count }));
+    await updateMyRow({ pattern_lines: newLines });
+    closeScanOverlay();
+  }
+
+  function wireScanUI(){
+    document.getElementById('scan-file-input').addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) handleScanFile(e.target.files[0]);
+      e.target.value = '';
+    });
+    wireScanHandleDragging();
+    document.getElementById('btn-scan-validate').addEventListener('click', validateScanCalibration);
+    document.getElementById('btn-scan-retake').addEventListener('click', () => {
+      showScanStep('scan-step-calibrate');
+      document.getElementById('scan-file-input').click();
+    });
+    document.getElementById('btn-scan-confirm').addEventListener('click', commitScanResult);
+    document.getElementById('btn-scan-cancel-1').addEventListener('click', closeScanOverlay);
+    document.getElementById('btn-scan-cancel-2').addEventListener('click', closeScanOverlay);
+    document.getElementById('btn-cnn-retry').addEventListener('click', () =>
+      loadCnnModel('../version_ia/tfjs_model/model.json', updateCnnStatusBadge));
   }
 
   async function init(){
@@ -238,6 +466,8 @@
     console.error(e.reason);
   });
 
+  wireScanUI();
+  loadCnnModel('../version_ia/tfjs_model/model.json', updateCnnStatusBadge);
   init();
 })();
 </script>
