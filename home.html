@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Azul — Compte-points</title>
+<link rel="stylesheet" href="multiplayer/shared/style.css">
+<style>
+  .choice-list{ display:flex; flex-direction:column; gap:10px; }
+  .choice{
+    display:block; text-decoration:none; padding:16px; border-radius:10px; border:1px solid var(--border);
+    background:var(--card); color:var(--text); transition:transform .1s ease;
+  }
+  .choice:active{ transform:scale(.98); }
+  .choice .choice-title{ font-family:var(--font-display); color:var(--accent); font-size:1rem; }
+  .choice .choice-desc{ font-size:.8rem; color:var(--muted); margin-top:4px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1 class="wordmark">Azul<span class="wordmark-sub">Compte-points</span></h1>
+
+  <div class="choice-list">
+    <a class="choice" href="index.html">
+      <div class="choice-title">🎮 Jouer en solo</div>
+      <div class="choice-desc">Un seul téléphone gère le score de tout le monde, saisie manuelle, fonctionne hors-ligne.</div>
+    </a>
+
+    <a class="choice" href="version_ia/index-scan-cnn.html">
+      <div class="choice-title">📷 Jouer en solo avec scan photo (IA)</div>
+      <div class="choice-desc">Comme ci-dessus, mais avec reconnaissance automatique des lignes de motifs par photo.</div>
+    </a>
+
+    <a class="choice" href="multiplayer/host.html">
+      <div class="choice-title">👥 Créer une partie multijoueur</div>
+      <div class="choice-desc">Chaque joueur rejoint depuis son propre téléphone via QR code et gère son propre plateau.</div>
+    </a>
+
+    <a class="choice" href="multiplayer/join.html">
+      <div class="choice-title">🔗 Rejoindre une partie</div>
+      <div class="choice-desc">Tu as reçu un code ou scanné un QR code — rejoins la partie ici.</div>
+    </a>
+  </div>
+</div>
+</body>
+</html>
