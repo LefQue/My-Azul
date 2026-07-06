@@ -1,0 +1,16 @@
+# Python virtualenv for the ML training pipeline — never part of the deployed app
+version_ia/ml/.venv/
+version_ia/ml/__pycache__/
+**/__pycache__/
+*.pyc
+
+# training data / dataset artifacts — regenerable, not needed to deploy or run the app
+version_ia/ml/dataset/
+version_ia/ml/training-data/
+
+# OS cruft
+.DS_Store
+**/.DS_Store
+
+# Vercel local state
+.vercel/
