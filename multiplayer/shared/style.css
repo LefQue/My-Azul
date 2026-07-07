@@ -97,7 +97,9 @@ input[type=text]{
 
 /* --- wall / pattern lines / floor (mêmes motifs que index-scan-cnn.html) --- */
 .pattern-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:9px; }
-.pl-slots{ display:flex; gap:4px; padding:4px; border-radius:6px; }
+/* largeur fixe (5 cases + 4 espaces) + alignement à droite : reproduit le plateau physique,
+   où les lignes de motifs sont justifiées côté mur (triangle pointe en haut à droite) */
+.pl-slots{ display:flex; gap:4px; padding:4px; border-radius:6px; width:146px; justify-content:flex-end; }
 .pl-slot{ width:26px; height:26px; border-radius:5px; border:1px solid var(--border); background:var(--bg); }
 .pl-palette{ display:flex; gap:6px; }
 .swatch{
@@ -182,7 +184,7 @@ input[type=text]{
   border-bottom:1px solid var(--border);
 }
 .scan-confirm-row.anomaly{ background:rgba(184,86,47,.12); border-radius:8px; padding:8px; }
-.scan-confirm-row .scr-slots{ display:flex; gap:4px; }
+.scan-confirm-row .scr-slots{ display:flex; gap:4px; width:136px; justify-content:flex-end; }
 .scan-confirm-row .scr-slot{ width:24px; height:24px; border-radius:5px; border:1px solid var(--border); background:var(--bg); }
 .scan-confirm-row .scr-palette{ display:flex; gap:4px; }
 .scan-confirm-row .scr-palette button{
