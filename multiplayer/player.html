@@ -161,7 +161,8 @@
 
     const patternHtml = myRow.pattern_lines.map((line, row) => {
       const slots = Array.from({length:line.capacity}, (_, i) => {
-        const filled = i < line.count;
+        // les cases se remplissent côté mur (bord droit) : les indices les plus hauts en premier
+        const filled = i >= line.capacity - line.count;
         return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}"></div>`;
       }).join('');
       const swatches = COLORS.map(c => {
@@ -362,7 +363,7 @@
     el.innerHTML = scanState.confirmRows.map((row, r) => {
       const capacity = r + 1;
       const slots = Array.from({length:capacity}, (_, i) => {
-        const filled = i < row.count;
+        const filled = i >= capacity - row.count;
         return `<div class="scr-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[row.color].hex)}` : ''}"></div>`;
       }).join('');
       const palette = COLORS.map(c =>
