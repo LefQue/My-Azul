@@ -196,3 +196,9 @@ input[type=text]{
   width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text);
 }
 .scan-anomaly-note{ font-size:.7rem; color:var(--accent-2); width:100%; margin-top:4px; }
+#scan-confirm-floor{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 0; }
+#scan-confirm-floor.anomaly{ background:rgba(184,86,47,.12); border-radius:8px; padding:8px; }
+#scan-confirm-floor .scf-slot{
+  width:28px; height:28px; border-radius:5px; border:1px solid var(--border); background:var(--bg);
+}
+#scan-confirm-floor .scf-slot.filled{ background:var(--accent); }

@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Azul">
+<meta name="theme-color" content="#f2e9d8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141b29" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjZjJlOWQ4Ii8+CjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcng9IjEyIiBmaWxsPSJub25lIiBzdHJva2U9IiMxZDRjNzgiIHN0cm9rZS13aWR0aD0iMi41Ii8+CjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWQ0Yzc4IiB0cmFuc2Zvcm09InJvdGF0ZSg0NSAyMyAyMykiLz4KPHJlY3QgeD0iMzQiIHk9IjE2IiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIGZpbGw9IiNjOTkzMmMiIHRyYW5zZm9ybT0icm90YXRlKDQ1IDQxIDIzKSIvPgo8cmVjdCB4PSIxNiIgeT0iMzQiIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgZmlsbD0iI2I4NTYyZiIgdHJhbnNmb3JtPSJyb3RhdGUoNDUgMjMgNDEpIi8+CjxyZWN0IHg9IjM0IiB5PSIzNCIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWY4ZjhmIiB0cmFuc2Zvcm09InJvdGF0ZSg0NSA0MSA0MSkiLz4KPC9zdmc+Cg==">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjZjJlOWQ4Ii8+CjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcng9IjEyIiBmaWxsPSJub25lIiBzdHJva2U9IiMxZDRjNzgiIHN0cm9rZS13aWR0aD0iMi41Ii8+CjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWQ0Yzc4IiB0cmFuc2Zvcm09InJvdGF0ZSg0NSAyMyAyMykiLz4KPHJlY3QgeD0iMzQiIHk9IjE2IiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIGZpbGw9IiNjOTkzMmMiIHRyYW5zZm9ybT0icm90YXRlKDQ1IDQxIDIzKSIvPgo8cmVjdCB4PSIxNiIgeT0iMzQiIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgZmlsbD0iI2I4NTYyZiIgdHJhbnNmb3JtPSJyb3RhdGUoNDUgMjMgNDEpIi8+CjxyZWN0IHg9IjM0IiB5PSIzNCIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWY4ZjhmIiB0cmFuc2Zvcm09InJvdGF0ZSg0NSA0MSA0MSkiLz4KPC9zdmc+Cg==">
+<title>Azul – Compte-points</title>
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#f2e9d8; --grout:29,76,120; --card:#fbf5e7; --text:#26313f; --muted:#7a7160;
+    --border:#d9c9a4; --accent:#1d4c78; --accent-soft:#3a6690; --accent-2:#b8562f; --gold:#c9932c;
+    --floor-fill:#a8402a; --shadow-sink: rgba(38,30,15,.16); --shadow-lift: rgba(38,30,15,.14);
+    --font-display:'Copperplate','Big Caslon',Georgia,'Times New Roman',serif;
+    --font-body:'Avenir Next',Avenir,'Century Gothic',-apple-system,sans-serif;
+    --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#141b29; --grout:224,179,74; --card:#1e293d; --text:#f3ead9; --muted:#9aa3b8;
+      --border:#324158; --accent:#6ba3d6; --accent-soft:#8fb9de; --accent-2:#e0895f; --gold:#e0b34a;
+      --floor-fill:#c4573a; --shadow-sink: rgba(0,0,0,.45); --shadow-lift: rgba(0,0,0,.4);
+    }
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0; font-family:var(--font-body); background:var(--bg); color:var(--text);
+    -webkit-font-smoothing:antialiased; overscroll-behavior-y:contain;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(var(--grout),.05) 0 1.5px, transparent 1.5px 26px),
+      repeating-linear-gradient(-45deg, rgba(var(--grout),.05) 0 1.5px, transparent 1.5px 26px);
+  }
+  #app{
+    max-width:480px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column;
+    padding-top:var(--safe-t);
+  }
+  h1{ font-size:1.4rem; margin:.4rem 0 1rem; }
+  h2{
+    font-family:var(--font-display); font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+    margin:1.4rem 0 .6rem; color:var(--accent); display:flex; align-items:center; gap:8px;
+  }
+  h2::before{ content:''; width:8px; height:8px; background:var(--gold); transform:rotate(45deg); flex:0 0 auto; }
+  button{ font:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  .screen{ padding:14px; flex:1; animation:fadeIn .5s ease both; }
+
+  @keyframes fadeIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+  @keyframes fadeSlideUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+  @keyframes popIn{ from{ opacity:0; transform:scale(.92); } to{ opacity:1; transform:scale(1); } }
+
+  /* --- wordmark --- */
+  .wordmark{
+    font-family:var(--font-display); text-align:center; margin:8px 0 4px; color:var(--accent);
+    font-size:2.4rem; letter-spacing:.06em; animation:fadeSlideUp .6s ease both;
+  }
+  .wordmark-sub{
+    display:block; font-family:var(--font-body); font-size:.72rem; letter-spacing:.34em;
+    text-transform:uppercase; color:var(--accent-2); margin-top:2px; font-weight:600;
+  }
+  .wordmark-rule{
+    display:flex; justify-content:center; gap:6px; margin:12px 0 24px;
+    animation:fadeIn .8s ease .1s both;
+  }
+  .wordmark-rule span{ width:6px; height:6px; background:var(--gold); transform:rotate(45deg); }
+
+  /* --- tile card base --- */
+  .tile-card{
+    background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset, 0 6px 16px var(--shadow-lift);
+    position:relative;
+  }
+  .tile-card::before, .tile-card::after{
+    content:''; position:absolute; width:9px; height:9px; border:2px solid var(--gold);
+    opacity:.55;
+  }
+  .tile-card::before{ top:8px; left:8px; border-right:none; border-bottom:none; }
+  .tile-card::after{ bottom:8px; right:8px; border-left:none; border-top:none; }
+
+  /* --- setup --- */
+  .setup-card{ margin-top:6px; animation:fadeSlideUp .6s ease .05s both; }
+  .setup-card > p{ font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 8px; }
+  #player-count-selector{ display:flex; gap:8px; margin:8px 0 18px; }
+  .count-btn{
+    flex:1; min-height:46px; border-radius:8px; border:1px solid var(--border); background:transparent;
+    color:var(--text); font-size:1.05rem; font-family:var(--font-display); transition:transform .12s ease;
+  }
+  .count-btn.active{ background:var(--accent); color:var(--card); border-color:var(--accent); }
+  .count-btn:active{ transform:scale(.94); }
+  #player-name-inputs{ display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+  .name-input{
+    min-height:46px; padding:8px 14px; border-radius:8px; border:1px solid var(--border);
+    background:var(--bg); color:var(--text); font-size:1rem; font-family:var(--font-body);
+  }
+  .name-input:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  #btn-start{
+    width:100%; min-height:50px; border:none; border-radius:8px; background:var(--accent); color:var(--card);
+    font-size:.95rem; font-family:var(--font-display); letter-spacing:.1em; text-transform:uppercase;
+    box-shadow:0 3px 0 var(--accent-soft); transition:transform .1s ease, box-shadow .1s ease;
+  }
+  #btn-start:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--accent-soft); }
+  #resume-banner{ margin-top:16px; margin-bottom:16px; animation:fadeSlideUp .5s ease both; }
+  #resume-banner p{ margin:0 0 4px; color:var(--muted); font-size:.85rem; }
+  #resume-banner .row{ display:flex; gap:8px; margin-top:10px; }
+  #resume-banner button{
+    flex:1; min-height:44px; border-radius:8px; border:1px solid var(--border); background:transparent;
+    color:var(--text); font-family:var(--font-display); letter-spacing:.05em; transition:transform .1s ease;
+  }
+  #resume-banner button:active{ transform:scale(.96); }
+  #btn-resume{ background:var(--accent); color:var(--card); border-color:var(--accent); }
+
+  /* --- player tabs --- */
+  #player-tabs{
+    position:sticky; top:var(--safe-t); background:var(--bg); display:flex; gap:6px; padding:10px 0;
+    overflow-x:auto; z-index:10; border-bottom:1px solid var(--border); scrollbar-width:none;
+    animation:fadeIn .35s ease both;
+  }
+  #player-tabs::-webkit-scrollbar{ display:none; }
+  .player-tab{
+    padding:9px 15px; border-radius:7px; border:1px solid var(--border); background:var(--card);
+    color:var(--text); white-space:nowrap; min-height:42px; font-size:.85rem; font-family:var(--font-body);
+    transition:transform .1s ease;
+  }
+  .player-tab.active{ background:var(--accent); color:var(--card); border-color:var(--accent); font-weight:600; }
+  .player-tab:active{ transform:scale(.95); }
+  #round-badge{
+    text-align:center; margin:14px auto 6px; width:74px; height:74px; border-radius:50%;
+    background:var(--card); border:2px solid var(--gold); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; box-shadow:0 4px 10px var(--shadow-lift);
+    animation:popIn .35s ease both;
+  }
+  #round-badge .rb-num{ font-family:var(--font-display); font-size:1.4rem; color:var(--accent); line-height:1; }
+  #round-badge .rb-label{ font-size:.55rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-top:2px; }
+
+  /* --- pattern lines --- */
+  .pattern-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:9px; }
+  .pl-slots{ display:flex; gap:4px; padding:4px; border-radius:6px; }
+  .pl-slot{
+    width:28px; height:28px; border-radius:5px; border:1px solid var(--border); background:var(--bg);
+  }
+  .pl-palette{ display:flex; gap:6px; }
+  .swatch{
+    width:28px; height:28px; min-width:28px; border-radius:50%; border:2px solid rgba(255,255,255,.5);
+    padding:0; box-shadow:0 1px 3px var(--shadow-sink); transition:transform .1s ease;
+  }
+  .swatch:active{ transform:scale(.88); }
+  .swatch.disabled-hint{ opacity:.28; }
+
+  /* --- wall --- */
+  .wall-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:5px; max-width:230px; margin:6px auto 0; }
+  .wall-cell{
+    aspect-ratio:1/1; border-radius:4px; border:1px solid var(--border);
+  }
+
+  /* --- floor line --- */
+  .floor-line{ display:flex; gap:5px; flex-wrap:wrap; margin-top:6px; }
+  .floor-slot{
+    width:36px; height:36px; border-radius:6px; border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; font-size:.78rem; color:var(--muted);
+    font-family:var(--font-body); transition:transform .1s ease; background:var(--card);
+  }
+  .floor-slot:active{ transform:scale(.9); }
+  .floor-slot.filled{ background:var(--floor-fill); color:#fdf3e7; border-color:var(--floor-fill); }
+  .marker-toggle{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:.8rem; color:var(--muted); }
+
+  .score-line{
+    text-align:center; font-size:1.2rem; margin-top:20px; font-family:var(--font-display); color:var(--accent);
+  }
+  .score-line strong{ font-size:1.6rem; }
+
+  /* --- actions --- */
+  #actions{
+    position:sticky; bottom:0; background:var(--bg); display:flex; gap:8px; padding:10px 0;
+    padding-bottom:calc(10px + var(--safe-b)); border-top:1px solid var(--border); margin-top:16px;
+  }
+  #actions button{
+    flex:1; min-height:48px; border-radius:8px; border:1px solid var(--border); background:var(--card);
+    color:var(--text); font-size:.78rem; font-family:var(--font-display); letter-spacing:.06em;
+    text-transform:uppercase; transition:transform .1s ease;
+  }
+  #actions button:active{ transform:scale(.95); }
+  #btn-end-round{ background:var(--accent); color:var(--card); border-color:var(--accent); }
+  #btn-end-game{ color:var(--accent-2); border-color:var(--accent-2); }
+  #btn-undo{ flex:0 0 auto; padding:0 14px; color:var(--floor-fill); border-color:var(--floor-fill); }
+
+  /* --- toast --- */
+  #toast{
+    position:fixed; bottom:calc(80px + var(--safe-b)); left:50%; transform:translateX(-50%);
+    background:var(--text); color:var(--bg); padding:9px 16px; border-radius:8px; opacity:0;
+    pointer-events:none; transition:opacity .3s, transform .3s; z-index:200;
+    max-width:88vw; text-align:center; font-size:.82rem; font-family:var(--font-body);
+  }
+  #toast.show{ opacity:1; transform:translate(-50%,-4px); }
+
+  /* --- modal --- */
+  .modal{ position:fixed; inset:0; background:rgba(20,15,5,.55); display:none; align-items:center; justify-content:center; z-index:100; padding:16px; }
+  .modal-content{
+    background:var(--card); padding:22px; border-radius:12px; max-width:90vw; max-height:80vh; overflow:auto;
+    border:1px solid var(--border); animation:popIn .25s ease both;
+  }
+  .modal-content h2{ margin-top:0; }
+  .modal-content button{
+    margin-top:16px; width:100%; min-height:46px; border-radius:8px; border:none; background:var(--accent);
+    color:var(--card); font-family:var(--font-display); letter-spacing:.08em; text-transform:uppercase; font-size:.85rem;
+  }
+
+  /* --- results --- */
+  #results h1{ text-align:center; }
+  .result-row{
+    background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px;
+    margin-bottom:10px; animation:fadeSlideUp .45s ease both;
+  }
+  .result-row.winner{ border-color:var(--gold); box-shadow:0 0 0 2px var(--gold) inset; }
+  .rank{ font-weight:600; margin-right:8px; font-family:var(--font-display); color:var(--accent); }
+  .rname{ font-family:var(--font-body); }
+  .rscore{ float:right; font-weight:700; font-family:var(--font-display); color:var(--accent); }
+  .rbonus{ color:var(--muted); font-size:.78rem; margin-top:6px; clear:both; }
+  #btn-new-game{
+    width:100%; min-height:50px; border-radius:8px; border:none; background:var(--accent); color:var(--card);
+    margin-top:8px; font-family:var(--font-display); letter-spacing:.08em; text-transform:uppercase;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
+  }
+
+  /* --- scan feature --- */
+  .section-header{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .section-header h2{ margin:0; }
+  .section-header-actions{ display:flex; gap:6px; }
+  #btn-scan-lines, #btn-scan-calibrate-bg, #btn-scan-calibrate-colors{
+    min-height:34px; padding:0 12px; border-radius:20px; border:1px solid var(--accent); background:var(--card);
+    color:var(--accent); font-size:.75rem; font-family:var(--font-body); transition:transform .1s ease;
+  }
+  #btn-scan-lines:active, #btn-scan-calibrate-bg:active, #btn-scan-calibrate-colors:active{ transform:scale(.93); }
+  #btn-scan-calibrate-bg, #btn-scan-calibrate-colors{ border-color:var(--border); color:var(--muted); }
+
+  #cnn-status-row{ display:flex; align-items:center; justify-content:center; gap:8px; margin:8px 0; font-size:.78rem; }
+  .cnn-status{ padding:4px 10px; border-radius:20px; border:1px solid var(--border); }
+  .cnn-status.loading{ color:var(--muted); }
+  .cnn-status.ready{ color:#1a7f4a; border-color:#1a7f4a; }
+  .cnn-status.error{ color:var(--floor-fill); border-color:var(--floor-fill); cursor:pointer; }
+  #btn-cnn-retry{ display:none; font-size:.72rem; padding:4px 10px; border-radius:20px; border:1px solid var(--border); background:var(--card); color:var(--text); }
+  #cnn-status-row.show-retry #btn-cnn-retry{ display:inline-block; }
+  #color-calib-preview{
+    width:120px; height:120px; border-radius:16px; margin:20px auto; border:1px solid var(--border);
+    background:var(--card); box-shadow:0 4px 10px var(--shadow-lift);
+  }
+
+  #scan-overlay{
+    position:fixed; inset:0; background:var(--bg); z-index:300; display:none; flex-direction:column;
+    padding:calc(12px + var(--safe-t)) 12px calc(12px + var(--safe-b));
+  }
+  #scan-overlay.open{ display:flex; }
+  .scan-step{ display:none; flex:1; flex-direction:column; min-height:0; }
+  .scan-step.active{ display:flex; }
+  .scan-title{ font-family:var(--font-display); color:var(--accent); font-size:1.1rem; margin:4px 0 10px; text-align:center; }
+  .scan-hint{ font-size:.8rem; color:var(--muted); text-align:center; margin:0 0 10px; }
+
+  #scan-calib-wrap{
+    position:relative; margin:0 auto; max-width:100%; touch-action:none; flex:1; min-height:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #scan-canvas{ max-width:100%; max-height:100%; display:block; border-radius:8px; border:1px solid var(--border); }
+  .scan-handle{
+    position:absolute; width:34px; height:34px; margin-left:-17px; margin-top:-17px;
+    border-radius:50%; background:var(--gold); border:3px solid var(--card);
+    box-shadow:0 2px 6px var(--shadow-sink); touch-action:none;
+  }
+  .scan-actions{ display:flex; gap:8px; margin-top:12px; }
+  .scan-actions button{
+    flex:1; min-height:48px; border-radius:8px; border:1px solid var(--border); background:var(--card);
+    color:var(--text); font-family:var(--font-display); letter-spacing:.06em; text-transform:uppercase; font-size:.78rem;
+  }
+  .scan-actions .primary{ background:var(--accent); color:var(--card); border-color:var(--accent); }
+  .scan-actions .danger{ color:var(--floor-fill); border-color:var(--floor-fill); }
+
+  #scan-confirm-rows{ flex:1; overflow:auto; }
+  .scan-confirm-row{
+    display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .scan-confirm-row.anomaly{ background:rgba(184,86,47,.12); border-radius:8px; padding:8px; }
+  .scan-confirm-row .scr-slots{ display:flex; gap:4px; }
+  .scan-confirm-row .scr-slot{ width:24px; height:24px; border-radius:5px; border:1px solid var(--border); background:var(--bg); }
+  .scan-confirm-row .scr-palette{ display:flex; gap:4px; }
+  .scan-confirm-row .scr-palette button{
+    width:24px; height:24px; min-width:24px; border-radius:50%; border:2px solid rgba(255,255,255,.5);
+    box-shadow:0 1px 3px var(--shadow-sink);
+  }
+  .scr-count{ display:flex; align-items:center; gap:6px; font-family:var(--font-display); color:var(--accent); }
+  .scr-count button{
+    width:28px; height:28px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text);
+  }
+  .scan-anomaly-note{ font-size:.7rem; color:var(--accent-2); width:100%; margin-top:4px; }
+  #scan-confirm-floor{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; padding:8px 0; }
+  #scan-confirm-floor.anomaly{ background:rgba(184,86,47,.12); border-radius:8px; padding:8px; }
+  #scan-confirm-floor .scf-slot{
+    width:28px; height:28px; border-radius:5px; border:1px solid var(--border); background:var(--bg);
+  }
+  #scan-confirm-floor .scf-slot.filled{ background:var(--accent); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <section id="screen-setup" class="screen">
+    <h1 class="wordmark">Azul<span class="wordmark-sub">Compte-points</span></h1>
+    <div class="wordmark-rule"><span></span><span></span><span></span></div>
+    <div id="resume-banner" class="tile-card" style="display:none">
+      <p>Une partie est en cours.</p>
+      <div class="row">
+        <button id="btn-resume">Reprendre</button>
+        <button id="btn-discard">Nouvelle partie</button>
+      </div>
+    </div>
+    <div class="setup-card tile-card">
+      <p>Nombre de joueurs</p>
+      <div id="player-count-selector"></div>
+      <div id="player-name-inputs"></div>
+      <button id="btn-start">Commencer la partie</button>
+    </div>
+  </section>
+
+  <section id="screen-playing" class="screen" style="display:none">
+    <div id="player-tabs"></div>
+    <div id="cnn-status-row">
+      <span id="cnn-status-badge" class="cnn-status loading">⏳ Modèle : chargement...</span>
+      <button id="btn-cnn-retry">Réessayer</button>
+    </div>
+    <div id="round-badge"></div>
+    <div id="board"></div>
+    <div id="actions">
+      <button id="btn-undo" style="display:none">Annuler</button>
+      <button id="btn-end-round">Terminer la manche</button>
+      <button id="btn-end-game">Fin de partie</button>
+    </div>
+  </section>
+
+  <section id="screen-results" class="screen" style="display:none">
+    <div id="results"></div>
+    <button id="btn-new-game">Nouvelle partie</button>
+  </section>
+
+</div>
+
+<div id="toast"></div>
+
+<div id="round-summary-modal" class="modal">
+  <div class="modal-content tile-card">
+    <h2>Résumé de la manche</h2>
+    <div id="round-summary-body"></div>
+    <button id="btn-close-summary">Fermer</button>
+  </div>
+</div>
+
+<input type="file" id="scan-file-input" accept="image/*" capture="environment" style="display:none">
+
+<div id="scan-overlay">
+  <div id="scan-step-calibrate" class="scan-step">
+    <p class="scan-title">Cadrer les lignes de motifs</p>
+    <p class="scan-hint">Place les 4 repères sur les coins du triangle : d'abord les 2 coins côté ligne courte, puis les 2 coins côté ligne longue (celle proche du mur).</p>
+    <div id="scan-calib-wrap">
+      <canvas id="scan-canvas"></canvas>
+      <div class="scan-handle" id="scan-handle-0" data-idx="0"></div>
+      <div class="scan-handle" id="scan-handle-1" data-idx="1"></div>
+      <div class="scan-handle" id="scan-handle-2" data-idx="2"></div>
+      <div class="scan-handle" id="scan-handle-3" data-idx="3"></div>
+    </div>
+    <div class="scan-actions">
+      <button id="btn-scan-cancel-1" class="danger">Annuler</button>
+      <button id="btn-scan-skip-floor" style="display:none">Passer le plancher</button>
+      <button id="btn-scan-validate" class="primary">Valider le cadrage</button>
+    </div>
+  </div>
+
+  <div id="scan-step-confirm" class="scan-step">
+    <p class="scan-title">Vérifier la lecture</p>
+    <p class="scan-hint">Corrige au besoin avant de confirmer : rien n'est encore enregistré.</p>
+    <div id="scan-confirm-rows"></div>
+    <p class="scan-title" style="margin-top:14px">Ligne de plancher</p>
+    <div id="scan-confirm-floor"></div>
+    <div class="scan-actions">
+      <button id="btn-scan-cancel-2" class="danger">Annuler</button>
+      <button id="btn-scan-retake">Reprendre la photo</button>
+      <button id="btn-scan-confirm" class="primary">Confirmer</button>
+    </div>
+  </div>
+
+  <div id="scan-step-color-calib" class="scan-step">
+    <p class="scan-title" id="color-calib-title">Calibrer : Bleu</p>
+    <p class="scan-hint">Photographie une seule tuile de cette couleur, bien à plat, cadrée en gros plan (elle doit remplir le centre de l'image).</p>
+    <div id="color-calib-preview"></div>
+    <div class="scan-actions">
+      <button id="btn-color-calib-cancel" class="danger">Annuler</button>
+      <button id="btn-color-calib-retake">Reprendre</button>
+      <button id="btn-color-calib-next" class="primary">Valider et continuer</button>
+    </div>
+  </div>
+</div>
+
+<script src="tfjs/tf.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  const COLORS = [
+    { id:'B', label:'Bleu',      hex:'#2563eb' },
+    { id:'Y', label:'Jaune',     hex:'#eab308' },
+    { id:'R', label:'Rouge',     hex:'#dc2626' },
+    { id:'K', label:'Noir',      hex:'#27272a' },
+    { id:'W', label:'Turquoise', hex:'#06b6d4' },
+  ];
+  const COLOR_MAP = Object.fromEntries(COLORS.map(c => [c.id, c]));
+
+  // motif fixe du mur : chaque ligne est une rotation cyclique de la précédente
+  const WALL_PATTERN = [
+    ['B','Y','R','K','W'],
+    ['W','B','Y','R','K'],
+    ['K','W','B','Y','R'],
+    ['R','K','W','B','Y'],
+    ['Y','R','K','W','B'],
+  ];
+  const FLOOR_PENALTIES = [-1,-1,-2,-2,-2,-3,-3];
+  const STORAGE_KEY = 'azulScoreState';
+
+  let gameState = null;
+  let lastSnapshot = null;
+  let setupPlayerCount = 2;
+
+  // ---------- persistence ----------
+  function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState)); }catch(e){} }
+  function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+  function clearState(){ try{ localStorage.removeItem(STORAGE_KEY); }catch(e){} }
+
+  // ---------- model ----------
+  function createPlayer(name){
+    return {
+      name,
+      wall: Array.from({length:5}, () => Array(5).fill(null)),
+      patternLines: Array.from({length:5}, (_, i) => ({ capacity:i+1, color:null, count:0 })),
+      floorFilled: 0,
+      hasFirstPlayerMarker: false,
+      totalScore: 0,
+      roundHistory: [],
+      finalBonuses: null,
+    };
+  }
+  function currentPlayer(){ return gameState.players[gameState.currentPlayerIndex]; }
+
+  // ---------- scoring engine ----------
+  function wallColumnFor(row, color){ return WALL_PATTERN[row].indexOf(color); }
+
+  function runLength(wall, row, col, dRow, dCol){
+    let r = row, c = col, count = 0;
+    while (r >= 0 && r < 5 && c >= 0 && c < 5 && wall[r][c] !== null){
+      count++; r += dRow; c += dCol;
+    }
+    return count;
+  }
+
+  function scoreTilePlacement(wall, row, col){
+    const hRun = runLength(wall,row,col,0,1) + runLength(wall,row,col,0,-1) - 1;
+    const vRun = runLength(wall,row,col,1,0) + runLength(wall,row,col,-1,0) - 1;
+    if (hRun > 1 && vRun > 1) return hRun + vRun;
+    if (hRun > 1) return hRun;
+    if (vRun > 1) return vRun;
+    return 1;
+  }
+
+  function sumFloorPenalty(filledCount){
+    return FLOOR_PENALTIES.slice(0, filledCount).reduce((s,v) => s+v, 0);
+  }
+
+  function endRoundForPlayer(player, round){
+    const completed = [];
+    let wallScore = 0;
+    player.patternLines.forEach((line, row) => {
+      if (line.count === line.capacity && line.color !== null){
+        const col = wallColumnFor(row, line.color);
+        if (player.wall[row][col] !== null){
+          line.color = null; line.count = 0;
+          return;
+        }
+        player.wall[row][col] = line.color;
+        const points = scoreTilePlacement(player.wall, row, col);
+        wallScore += points;
+        completed.push({ row, color:line.color, col, points });
+        line.color = null; line.count = 0;
+      }
+    });
+    const floorPenalty = sumFloorPenalty(player.floorFilled);
+    player.floorFilled = 0;
+    player.hasFirstPlayerMarker = false;
+    const rawDelta = wallScore + floorPenalty;
+    // le total cumulé ne peut jamais descendre sous 0 (règle officielle) ; on clampe le cumul, pas le delta de la manche
+    const newTotal = Math.max(0, player.totalScore + rawDelta);
+    player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed });
+    player.totalScore = newTotal;
+  }
+
+  function computeEndGameBonuses(player){
+    const wall = player.wall;
+    let rows = 0, cols = 0, colors = 0;
+    for (let r = 0; r < 5; r++) if (wall[r].every(c => c !== null)) rows++;
+    for (let c = 0; c < 5; c++) if (wall.every(row => row[c] !== null)) cols++;
+    for (const color of COLORS.map(c => c.id)){
+      let count = 0;
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) if (wall[r][c] === color) count++;
+      if (count === 5) colors++;
+    }
+    const bonusPoints = rows*2 + cols*7 + colors*10;
+    player.finalBonuses = { rows, cols, colors, bonusPoints };
+    player.totalScore += bonusPoints;
+  }
+
+  // ---------- helpers ----------
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+  function hexToRgba(hex, alpha){
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  // superpose un reflet glacé (façon céramique émaillée) sur les tuiles pleines
+  function tileGloss(hex){
+    return `linear-gradient(160deg, rgba(255,255,255,.4), rgba(255,255,255,0) 45%, rgba(0,0,0,.14)), ${hex}`;
+  }
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+    document.getElementById(id).style.display = 'block';
+  }
+  let toastTimer = null;
+  function showToast(msg){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  // ---------- setup screen ----------
+  function renderPlayerCountSelector(){
+    const el = document.getElementById('player-count-selector');
+    el.innerHTML = '';
+    [2,3,4].forEach(n => {
+      const btn = document.createElement('button');
+      btn.textContent = n;
+      btn.className = 'count-btn' + (n === setupPlayerCount ? ' active' : '');
+      btn.addEventListener('click', () => { setupPlayerCount = n; renderPlayerCountSelector(); renderNameInputs(); });
+      el.appendChild(btn);
+    });
+  }
+  function renderNameInputs(){
+    const el = document.getElementById('player-name-inputs');
+    const existing = Array.from(el.querySelectorAll('input')).map(i => i.value);
+    el.innerHTML = '';
+    for (let i = 0; i < setupPlayerCount; i++){
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.placeholder = `Joueur ${i+1}`;
+      input.value = existing[i] || '';
+      input.className = 'name-input';
+      el.appendChild(input);
+    }
+  }
+  function startNewGame(){
+    const names = Array.from(document.querySelectorAll('.name-input')).map((inp,i) => inp.value.trim() || `Joueur ${i+1}`);
+    gameState = { players: names.map(createPlayer), currentRound:1, currentPlayerIndex:0, phase:'playing' };
+    lastSnapshot = null;
+    saveState();
+    showScreen('screen-playing');
+    renderPlaying();
+  }
+
+  // ---------- playing screen ----------
+  function renderPlaying(){
+    renderPlayerTabs();
+    renderRoundBadge();
+    renderBoard();
+    document.getElementById('btn-undo').style.display = lastSnapshot ? 'inline-block' : 'none';
+  }
+
+  function renderPlayerTabs(){
+    const el = document.getElementById('player-tabs');
+    el.innerHTML = gameState.players.map((p,i) =>
+      `<button class="player-tab ${i===gameState.currentPlayerIndex?'active':''}" data-idx="${i}">${escapeHtml(p.name)} · ${p.totalScore}</button>`
+    ).join('');
+    el.querySelectorAll('.player-tab').forEach(btn => {
+      btn.addEventListener('click', () => { gameState.currentPlayerIndex = parseInt(btn.dataset.idx,10); renderPlaying(); });
+    });
+  }
+
+  function renderRoundBadge(){
+    document.getElementById('round-badge').innerHTML =
+      `<span class="rb-num">${gameState.currentRound}</span><span class="rb-label">Manche</span>`;
+  }
+
+  function renderBoard(){
+    const player = currentPlayer();
+    const container = document.getElementById('board');
+
+    const patternHtml = player.patternLines.map((line, row) => {
+      const slots = Array.from({length:line.capacity}, (_, i) => {
+        const filled = i < line.count;
+        return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}"></div>`;
+      }).join('');
+      const swatches = COLORS.map(c => {
+        const col = wallColumnFor(row, c.id);
+        const disabledHint = player.wall[row][col] !== null;
+        return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}"></button>`;
+      }).join('');
+      return `<div class="pattern-row">
+        <div class="pl-slots" data-row="${row}">${slots}</div>
+        <div class="pl-palette">${swatches}</div>
+      </div>`;
+    }).join('');
+
+    const wallHtml = `<div class="wall-grid">` + player.wall.map((rowArr, r) =>
+      rowArr.map((cell, c) => {
+        const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
+        const style = cell !== null
+          ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
+          : `background:${hexToRgba(patternHex,0.16)}; border:1px dashed ${hexToRgba(patternHex,0.45)};`;
+        return `<div class="wall-cell" style="${style}"></div>`;
+      }).join('')
+    ).join('') + `</div>`;
+
+    const floorHtml = `<div class="floor-line">` + FLOOR_PENALTIES.map((pen, i) => {
+      const filled = i < player.floorFilled;
+      return `<div class="floor-slot ${filled?'filled':''}" data-idx="${i}">${pen}</div>`;
+    }).join('') + `</div>
+      <label class="marker-toggle"><input type="checkbox" id="marker-checkbox" ${player.hasFirstPlayerMarker?'checked':''}/> Jeton premier joueur (compte aussi une case de la ligne de plancher)</label>`;
+
+    container.innerHTML = `
+      <div class="section-header">
+        <h2>Lignes de motifs</h2>
+        <div class="section-header-actions">
+          <button id="btn-scan-lines">📷 Scanner (IA)</button>
+        </div>
+      </div>
+      ${patternHtml}
+      <h2>Mur</h2>
+      ${wallHtml}
+      <h2>Ligne de plancher</h2>
+      ${floorHtml}
+      <p class="score-line">Score total : <strong>${player.totalScore}</strong></p>
+    `;
+
+    document.getElementById('btn-scan-lines').addEventListener('click', () => openScanOverlay('scan'));
+    container.querySelectorAll('.swatch').forEach(btn => {
+      btn.addEventListener('click', () => tapColor(parseInt(btn.dataset.row,10), btn.dataset.color));
+    });
+    container.querySelectorAll('.pl-slots').forEach(el => {
+      el.addEventListener('click', () => tapSlots(parseInt(el.dataset.row,10)));
+    });
+    container.querySelectorAll('.floor-slot').forEach(el => {
+      el.addEventListener('click', () => tapFloorSlot(parseInt(el.dataset.idx,10)));
+    });
+    document.getElementById('marker-checkbox').addEventListener('change', (e) => {
+      player.hasFirstPlayerMarker = e.target.checked;
+      if (e.target.checked){
+        addFloorTile(player);
+      } else {
+        player.floorFilled = Math.max(player.floorFilled - 1, 0);
+      }
+      saveState();
+      renderBoard();
+    });
+  }
+
+  function addFloorTile(player){
+    player.floorFilled = Math.min(player.floorFilled + 1, FLOOR_PENALTIES.length);
+  }
+
+  function tapColor(rowIndex, colorId){
+    const player = currentPlayer();
+    const line = player.patternLines[rowIndex];
+
+    if (line.count === line.capacity && line.color !== null){
+      // ligne déjà complète : toute tuile supplémentaire n'a nulle part où aller, elle part au plancher
+      addFloorTile(player);
+      showToast(`Ligne ${rowIndex+1} déjà pleine : tuile envoyée au plancher.`);
+      saveState();
+      renderBoard();
+      return;
+    }
+
+    const col = wallColumnFor(rowIndex, colorId);
+    if (player.wall[rowIndex][col] !== null){
+      showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur.`);
+    }
+    if (line.color !== null && line.color !== colorId){
+      showToast(`Ligne remplacée : ${COLOR_MAP[line.color].label} → ${COLOR_MAP[colorId].label}`);
+      line.color = colorId;
+      line.count = 1;
+    } else {
+      line.color = colorId;
+      line.count = line.count + 1;
+    }
+    saveState();
+    renderBoard();
+  }
+
+  function tapSlots(rowIndex){
+    const player = currentPlayer();
+    const line = player.patternLines[rowIndex];
+    if (line.count > 0){
+      line.count -= 1;
+      if (line.count === 0) line.color = null;
+      saveState();
+      renderBoard();
+    }
+  }
+
+  function tapFloorSlot(i){
+    const player = currentPlayer();
+    player.floorFilled = (i < player.floorFilled) ? i : i + 1;
+    saveState();
+    renderBoard();
+  }
+
+  function showRoundSummary(summaries){
+    const body = document.getElementById('round-summary-body');
+    body.innerHTML = gameState.players.map((p,i) => {
+      const s = summaries[i];
+      const sign = s.roundDelta >= 0 ? '+' : '';
+      // completedLines est déjà dans l'ordre ligne 1 → ligne 5 (ordre de calcul réel)
+      const lines = s.completedLines.map(l =>
+        `<li>Ligne ${l.row+1} (${COLOR_MAP[l.color].label}) : +${l.points}</li>`
+      ).join('');
+      return `<div style="color:var(--text); margin-bottom:12px;"><strong>${escapeHtml(p.name)}</strong>
+        ${lines ? `<ul style="margin:4px 0; padding-left:20px;">${lines}</ul>` : '<p style="margin:4px 0;color:var(--muted)">Aucune ligne complétée</p>'}
+        <p style="margin:4px 0 0;">mur +${s.wallScore}, plancher ${s.floorPenalty} → ${sign}${s.roundDelta} (total ${s.runningTotal})</p>
+      </div>`;
+    }).join('');
+    document.getElementById('round-summary-modal').style.display = 'flex';
+  }
+
+  // ---------- results screen ----------
+  function renderResults(){
+    const el = document.getElementById('results');
+    const sorted = [...gameState.players].sort((a,b) =>
+      b.totalScore - a.totalScore || (b.finalBonuses?.rows||0) - (a.finalBonuses?.rows||0)
+    );
+    const maxScore = sorted[0].totalScore;
+    el.innerHTML = `<h1>Résultats finaux</h1>` + sorted.map((p,i) => {
+      const isWinner = p.totalScore === maxScore;
+      const b = p.finalBonuses || { rows:0, cols:0, colors:0, bonusPoints:0 };
+      return `<div class="result-row ${isWinner?'winner':''}" style="animation-delay:${i*80}ms">
+        <span class="rank">#${i+1}${isWinner?' 👑':''}</span>
+        <span class="rname">${escapeHtml(p.name)}</span>
+        <span class="rscore">${p.totalScore} pts</span>
+        <div class="rbonus">Bonus : ${b.rows} ligne(s) (+${b.rows*2}), ${b.cols} colonne(s) (+${b.cols*7}), ${b.colors} couleur(s) (+${b.colors*10})</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---------- wiring ----------
+  function init(){
+    const saved = loadState();
+    if (saved){
+      document.getElementById('resume-banner').style.display = 'block';
+      document.getElementById('btn-resume').addEventListener('click', () => {
+        gameState = saved;
+        if (gameState.phase === 'ended'){
+          renderResults();
+          showScreen('screen-results');
+        } else {
+          showScreen('screen-playing');
+          renderPlaying();
+        }
+      });
+      document.getElementById('btn-discard').addEventListener('click', () => {
+        clearState();
+        document.getElementById('resume-banner').style.display = 'none';
+      });
+    }
+
+    renderPlayerCountSelector();
+    renderNameInputs();
+    document.getElementById('btn-start').addEventListener('click', startNewGame);
+
+    document.getElementById('btn-end-round').addEventListener('click', () => {
+      lastSnapshot = JSON.parse(JSON.stringify(gameState));
+      const round = gameState.currentRound;
+      const summaries = gameState.players.map(p => {
+        endRoundForPlayer(p, round);
+        return p.roundHistory[p.roundHistory.length - 1];
+      });
+      gameState.currentRound += 1;
+      saveState();
+      renderPlaying();
+      showRoundSummary(summaries);
+    });
+
+    document.getElementById('btn-undo').addEventListener('click', () => {
+      if (lastSnapshot){
+        gameState = lastSnapshot;
+        lastSnapshot = null;
+        saveState();
+        renderPlaying();
+      }
+    });
+
+    document.getElementById('btn-close-summary').addEventListener('click', () => {
+      document.getElementById('round-summary-modal').style.display = 'none';
+    });
+
+    document.getElementById('btn-end-game').addEventListener('click', () => {
+      if (!confirm('Terminer la partie et calculer les bonus finaux ?')) return;
+      gameState.players.forEach(computeEndGameBonuses);
+      gameState.phase = 'ended';
+      saveState();
+      renderResults();
+      showScreen('screen-results');
+    });
+
+    document.getElementById('btn-new-game').addEventListener('click', () => {
+      clearState();
+      gameState = null;
+      lastSnapshot = null;
+      document.getElementById('resume-banner').style.display = 'none';
+      showScreen('screen-setup');
+    });
+  }
+
+  // ================================================================
+  // ---------- scan des lignes de motifs par photo (vision classique) ----------
+  // ================================================================
+
+  // -- géométrie : rectangle englobant 5x5, seules 15 cases existent physiquement --
+  // ligne r (0=haut/capacité 1 … 4=bas/capacité 5) : cases réelles = colonnes [4-r .. 4] (justifiées côté mur)
+  function realCellsForRow(row){
+    const cells = [];
+    for (let c = 4 - row; c <= 4; c++) cells.push(c);
+    return cells;
+  }
+
+  // -- homographie : résout H tel que canonique(0..5,0..5) -> photo, à partir de 4 correspondances --
+  function solveLinearSystem(A, b){
+    const n = A.length;
+    const M = A.map((row, i) => [...row, b[i]]);
+    for (let col = 0; col < n; col++){
+      let pivot = col;
+      for (let r = col + 1; r < n; r++){
+        if (Math.abs(M[r][col]) > Math.abs(M[pivot][col])) pivot = r;
+      }
+      [M[col], M[pivot]] = [M[pivot], M[col]];
+      const div = M[col][col];
+      for (let c = col; c <= n; c++) M[col][c] /= div;
+      for (let r = 0; r < n; r++){
+        if (r === col) continue;
+        const factor = M[r][col];
+        for (let c = col; c <= n; c++) M[r][c] -= factor * M[col][c];
+      }
+    }
+    return M.map(row => row[n]);
+  }
+
+  function solveHomography(canonicalPts, photoPts){
+    const A = [], b = [];
+    for (let i = 0; i < 4; i++){
+      const { x: xc, y: yc } = canonicalPts[i];
+      const { x: xp, y: yp } = photoPts[i];
+      A.push([xc, yc, 1, 0, 0, 0, -xp * xc, -xp * yc]); b.push(xp);
+      A.push([0, 0, 0, xc, yc, 1, -yp * xc, -yp * yc]); b.push(yp);
+    }
+    const h = solveLinearSystem(A, b);
+    return { h11:h[0], h12:h[1], h13:h[2], h21:h[3], h22:h[4], h23:h[5], h31:h[6], h32:h[7] };
+  }
+
+  function applyHomography(H, xc, yc){
+    const denom = H.h31 * xc + H.h32 * yc + 1;
+    return {
+      x: (H.h11 * xc + H.h12 * yc + H.h13) / denom,
+      y: (H.h21 * xc + H.h22 * yc + H.h23) / denom,
+    };
+  }
+
+  // -- couleurs : RGB -> HSV, distance perceptuelle avec cas particulier basse saturation (noir/fond) --
+  function rgbToHsv(r, g, b){
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b), d = max - min;
+    let h = 0;
+    if (d !== 0){
+      if (max === r) h = ((g - b) / d) % 6;
+      else if (max === g) h = (b - r) / d + 2;
+      else h = (r - g) / d + 4;
+      h *= 60;
+      if (h < 0) h += 360;
+    }
+    return { h, s: max === 0 ? 0 : d / max, v: max };
+  }
+
+  function hexToRgbArr(hex){
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+  }
+
+  const SCAN_SAT_THRESHOLD = 0.18;
+  const SCAN_DEFAULT_BG_HSV = { h: 40, s: 0.12, v: 0.86 }; // estimation par défaut d'un fond clair de plateau
+
+  function circularHueDist(h1, h2){
+    const d = Math.abs(h1 - h2) % 360;
+    return d > 180 ? 360 - d : d;
+  }
+
+  function scanColorDistance(a, b){
+    if (a.s < SCAN_SAT_THRESHOLD && b.s < SCAN_SAT_THRESHOLD) return Math.abs(a.v - b.v);
+    const dh = circularHueDist(a.h, b.h) / 180, ds = Math.abs(a.s - b.s), dv = Math.abs(a.v - b.v);
+    return 0.6*dh + 0.25*ds + 0.15*dv;
+  }
+
+  // colorRefs: map optionnelle {colorId: {h,s,v}} mesurée par calibration ; à défaut, couleur de référence dérivée du hex UI
+  // classe UN échantillon isolé au plus proche voisin (vide ou une des 5 couleurs) — pas d'agrégation ici
+  function classifySample(hsv, bgHsv, colorRefs){
+    const candidates = [{ kind: null, dist: scanColorDistance(hsv, bgHsv) }];
+    COLORS.forEach(c => {
+      const ref = (colorRefs && colorRefs[c.id]) || rgbToHsv(...hexToRgbArr(c.hex));
+      candidates.push({ kind: c.id, dist: scanColorDistance(hsv, ref) });
+    });
+    candidates.sort((a,b) => a.dist - b.dist);
+    return candidates[0].kind;
+  }
+
+  // Certaines tuiles Azul ne sont pas unies : jaune a des volutes rouges, noir a de petites fleurs bleu clair,
+  // turquoise est surtout blanc avec une étoile bleu clair — une bonne partie de leur surface n'est pas la couleur
+  // "principale". Moyenner tous les échantillons d'une case peut donc tomber entre deux teintes qui n'existent nulle
+  // part sur la tuile. On classe donc chaque échantillon indépendamment, puis on prend la couleur MAJORITAIRE parmi
+  // tous les échantillons de la case — la zone la plus étendue de la tuile l'emporte, sans jamais être "diluée".
+  function classifyScanCell(samplesHsv, bgHsv, colorRefs){
+    const votes = {};
+    samplesHsv.forEach(hsv => {
+      const kind = classifySample(hsv, bgHsv, colorRefs);
+      const key = kind === null ? '_empty' : kind;
+      votes[key] = (votes[key] || 0) + 1;
+    });
+    const entries = Object.entries(votes).sort((a,b) => b[1] - a[1]);
+    const [topKey, topCount] = entries[0];
+    const secondCount = entries[1] ? entries[1][1] : 0;
+    const total = samplesHsv.length;
+    let ambiguous = (topCount - secondCount) / total < 0.2; // écart de vote < 20% => ambigu
+    // cas turquoise/blanc : sa couleur dominante ressemble au fond vide, donc le vote peut donner "vide" gagnant
+    // alors qu'une case est bien occupée. Si une couleur recueille un score non négligeable même en perdant,
+    // ne jamais conclure silencieusement à une case vide — la signaler pour vérification manuelle à la place.
+    if (topKey === '_empty' && secondCount / total >= 0.2) ambiguous = true;
+    return { kind: topKey === '_empty' ? null : topKey, ambiguous };
+  }
+
+  function getPixel(imageData, x, y){
+    const px = Math.max(0, Math.min(imageData.width - 1, Math.round(x)));
+    const py = Math.max(0, Math.min(imageData.height - 1, Math.round(y)));
+    const idx = (py * imageData.width + px) * 4;
+    return { r: imageData.data[idx], g: imageData.data[idx+1], b: imageData.data[idx+2] };
+  }
+
+  // moyenne circulaire de teinte (gère le passage 359°→0°, important pour le rouge dont la teinte est ~0°)
+  function circularMeanHue(hues){
+    let sx = 0, sy = 0;
+    hues.forEach(h => { const rad = h * Math.PI / 180; sx += Math.cos(rad); sy += Math.sin(rad); });
+    let angle = Math.atan2(sy, sx) * 180 / Math.PI;
+    if (angle < 0) angle += 360;
+    return angle;
+  }
+
+  // -- agrégation robuste d'un ensemble d'échantillons HSV : écarte les 25% les plus sombres et les 25% les plus
+  // clairs (ombres/reflets du relief gravé des tuiles) avant de moyenner, pour ne garder que les pixels
+  // représentatifs de la couleur de base plutôt que les artefacts du motif en relief.
+  function robustHsvFromSamples(samples){
+    const byValue = [...samples].sort((a,b) => a.v - b.v);
+    const trim = Math.floor(byValue.length * 0.25);
+    const mid = (byValue.length - 2*trim) > 0 ? byValue.slice(trim, byValue.length - trim) : byValue;
+    const h = circularMeanHue(mid.map(s => s.h));
+    const s = mid.reduce((sum,x) => sum + x.s, 0) / mid.length;
+    const v = mid.reduce((sum,x) => sum + x.v, 0) / mid.length;
+    return { h, s, v };
+  }
+
+  const SCAN_SAMPLE_OFFSETS = [-0.3, -0.15, 0, 0.15, 0.3];
+
+  // échantillonne une case du triangle (via l'homographie) sur une grille dense, robuste au relief gravé des tuiles
+  // renvoie la liste brute des échantillons HSV de la case (pas d'agrégation : le vote se fait ensuite par échantillon)
+  function sampleScanCell(imageData, H, row, col){
+    const xc = col + 0.5, yc = row + 0.5;
+    const samples = [];
+    for (const dx of SCAN_SAMPLE_OFFSETS){
+      for (const dy of SCAN_SAMPLE_OFFSETS){
+        const p = applyHomography(H, xc + dx, yc + dy);
+        const px = getPixel(imageData, p.x, p.y);
+        samples.push(rgbToHsv(px.r, px.g, px.b));
+      }
+    }
+    return samples;
+  }
+
+  // -- extraction d'image de case pour le CNN (même fonction que index-scan-train.html, gardée identique
+  // car train_model.py attend exactement ce format de recadrage : PATCH_SIZE/PATCH_MARGIN doivent matcher) --
+  const PATCH_SIZE = 48;
+  const PATCH_MARGIN = 0.12;
+
+  function extractCellPatch(imageData, H, row, col, size){
+    size = size || PATCH_SIZE;
+    const out = new ImageData(size, size);
+    for (let j = 0; j < size; j++){
+      for (let i = 0; i < size; i++){
+        const u = (i + 0.5) / size, v = (j + 0.5) / size;
+        const xc = col + PATCH_MARGIN + u * (1 - 2*PATCH_MARGIN);
+        const yc = row + PATCH_MARGIN + v * (1 - 2*PATCH_MARGIN);
+        const p = applyHomography(H, xc, yc);
+        const px = getPixel(imageData, p.x, p.y);
+        const idx = (j*size + i) * 4;
+        out.data[idx] = px.r; out.data[idx+1] = px.g; out.data[idx+2] = px.b; out.data[idx+3] = 255;
+      }
+    }
+    return out;
+  }
+
+  function patchToCanvas(patchImageData){
+    const c = document.createElement('canvas');
+    c.width = patchImageData.width; c.height = patchImageData.height;
+    c.getContext('2d').putImageData(patchImageData, 0, 0);
+    return c;
+  }
+
+  // -- inférence CNN (remplace classifyScanCell/scanColorDistance de la version classique) --
+  // ATTENTION : cet ordre doit être recopié EXACTEMENT depuis la sortie de train_model.py
+  // (Keras trie les classes alphabétiquement : B,K,R,W,Y,empty -- pas B,Y,R,K,W,empty)
+  const CNN_LABELS = ['B','K','R','W','Y','empty'];
+  const CNN_CONFIDENCE_THRESHOLD = 0.6;
+  let cnnModel = null;
+  let cnnModelError = null;
+
+  function updateCnnStatusBadge(state, detail){
+    const el = document.getElementById('cnn-status-badge');
+    const row = document.getElementById('cnn-status-row');
+    if (!el || !row) return;
+    row.classList.toggle('show-retry', state === 'error');
+    if (state === 'loading'){ el.textContent = '⏳ Modèle : chargement...'; el.className = 'cnn-status loading'; el.title = ''; }
+    else if (state === 'ready'){ el.textContent = '✅ Modèle prêt'; el.className = 'cnn-status ready'; el.title = ''; }
+    else {
+      el.textContent = '⚠️ Modèle introuvable (touche pour le détail)';
+      el.className = 'cnn-status error';
+      el.title = detail || '';
+      el.onclick = () => alert(detail || 'Aucun détail disponible.');
+    }
+  }
+
+  async function loadCnnModel(){
+    updateCnnStatusBadge('loading');
+    // URL absolue plutôt que relative : certains navigateurs (Safari iOS observé) ne résolvent pas
+    // toujours un chemin relatif nu de la même façon selon le contexte de chargement de la page.
+    const modelUrl = new URL('tfjs_model/model.json', window.location.href).href;
+    try{
+      cnnModel = await tf.loadLayersModel(modelUrl);
+      tf.tidy(() => cnnModel.predict(tf.zeros([1, PATCH_SIZE, PATCH_SIZE, 3])));
+      cnnModelError = null;
+      updateCnnStatusBadge('ready');
+      console.log('Modèle CNN chargé depuis', modelUrl);
+    }catch(e){
+      cnnModel = null;
+      cnnModelError = e;
+      updateCnnStatusBadge('error', `${modelUrl} — ${e && e.message ? e.message : e}`);
+      console.warn('Modèle CNN introuvable/invalide.', modelUrl, e);
+    }
+  }
+
+  // remplace le pipeline classifyScanCell/aggregateScanRow-en-boucle : classe les 15 cases réelles
+  // en un seul batch, puis reconstruit exactement la même forme {kind, ambiguous} par case qu'avant,
+  // pour qu'aggregateScanRow/l'écran de confirmation n'aient rien à changer.
+  function classifyCellsCnn(imageData, H, cellDescriptors){
+    const patches = cellDescriptors.map(({row,col}) =>
+      tf.browser.fromPixels(patchToCanvas(extractCellPatch(imageData, H, row, col))).toFloat()
+    );
+    const batch = tf.stack(patches);
+    const probsTensor = cnnModel.predict(batch);
+    const probs = probsTensor.arraySync();
+    tf.dispose([...patches, batch, probsTensor]);
+
+    return probs.map(p => {
+      const sorted = p.map((v,i) => ({ v, i })).sort((a,b) => b.v - a.v);
+      const [best, second] = sorted;
+      let ambiguous = best.v < CNN_CONFIDENCE_THRESHOLD;
+      // cas connu le plus dur : turquoise/blanc vs vide se ressemblent visuellement sur cette édition de
+      // tuiles — ne jamais trancher silencieusement si ce sont les deux meilleures classes et qu'elles sont proches
+      const pair = new Set([CNN_LABELS[best.i], CNN_LABELS[second.i]]);
+      if (pair.has('W') && pair.has('empty') && (best.v - second.v) < 0.25) ambiguous = true;
+      const kind = CNN_LABELS[best.i] === 'empty' ? null : CNN_LABELS[best.i];
+      return { kind, ambiguous };
+    });
+  }
+
+  function hsvToRgbCss(hsv){
+    const h = hsv.h / 60, s = hsv.s, v = hsv.v;
+    const c = v*s, x = c*(1 - Math.abs(h % 2 - 1)), m = v - c;
+    let r,g,b;
+    if (h < 1) [r,g,b] = [c,x,0];
+    else if (h < 2) [r,g,b] = [x,c,0];
+    else if (h < 3) [r,g,b] = [0,c,x];
+    else if (h < 4) [r,g,b] = [0,x,c];
+    else if (h < 5) [r,g,b] = [x,0,c];
+    else [r,g,b] = [c,0,x];
+    return `rgb(${Math.round((r+m)*255)},${Math.round((g+m)*255)},${Math.round((b+m)*255)})`;
+  }
+
+  // -- calibration couleur : une tuile seule remplit le cadre, on échantillonne une grille dense sans homographie --
+  function sampleCenterPatch(canvas){
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height, cx = w/2, cy = h/2;
+    const patchW = w*0.5, patchH = h*0.5, steps = 9;
+    const samples = [];
+    for (let i=0;i<steps;i++){
+      for (let j=0;j<steps;j++){
+        const x = cx - patchW/2 + patchW*i/(steps-1);
+        const y = cy - patchH/2 + patchH*j/(steps-1);
+        const d = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data;
+        samples.push(rgbToHsv(d[0], d[1], d[2]));
+      }
+    }
+    return robustHsvFromSamples(samples);
+  }
+
+  // -- agrégation par ligne : depuis le côté mur, la 1ère case vide arrête le comptage --
+  function aggregateScanRow(cellResults){
+    const fromWall = [...cellResults].reverse();
+    let count = 0, color = null, anomaly = false;
+    for (const cell of fromWall){
+      if (cell.kind === null) break;
+      if (color === null) color = cell.kind;
+      else if (cell.kind !== color) anomaly = true;
+      count++;
+    }
+    for (let i = count; i < fromWall.length; i++){
+      if (fromWall[i].kind !== null) anomaly = true;
+    }
+    if (cellResults.some(c => c.ambiguous)) anomaly = true;
+    return { color, count, anomaly };
+  }
+
+  // classification par CNN : un seul batch pour les 15 cases réelles, puis agrégation par ligne inchangée
+  function runScanPipeline(imageData, H){
+    const descriptors = [];
+    for (let row = 0; row < 5; row++){
+      for (const col of realCellsForRow(row)) descriptors.push({ row, col });
+    }
+    const cellResults = classifyCellsCnn(imageData, H, descriptors);
+
+    const rows = [];
+    let idx = 0;
+    for (let row = 0; row < 5; row++){
+      const capacity = row + 1;
+      rows.push(aggregateScanRow(cellResults.slice(idx, idx + capacity)));
+      idx += capacity;
+    }
+    return rows;
+  }
+
+  // ================================================================
+  // -- détection automatique de la ligne de plancher (7 cases, occupé/vide) --
+  // Contrairement aux lignes de motifs, on ne cherche pas QUELLE couleur est posée (une tuile de
+  // n'importe quelle couleur en trop compte pareil) — un simple seuillage de distance de couleur
+  // suffit, pas besoin d'un second modèle entraîné.
+  // ================================================================
+  const FLOOR_CANONICAL_PTS = [{x:0,y:0},{x:7,y:0},{x:7,y:1},{x:0,y:1}];
+  const FLOOR_PATCH_MARGIN = 0.15;
+  const FLOOR_DEFAULT_EMPTY_RGB = { r: 216, g: 205, b: 182 };
+  const FLOOR_OCCUPIED_THRESHOLD = 45;
+  const FLOOR_CALIBRATION_KEY = 'azulFloorCalibration';
+
+  function loadFloorCalibration(){
+    try{
+      const raw = localStorage.getItem(FLOOR_CALIBRATION_KEY);
+      if (raw) return JSON.parse(raw);
+    }catch(e){}
+    return FLOOR_DEFAULT_EMPTY_RGB;
+  }
+  function saveFloorCalibration(rgb){
+    try{ localStorage.setItem(FLOOR_CALIBRATION_KEY, JSON.stringify(rgb)); }catch(e){}
+  }
+  function rgbDistance(a, b){
+    return Math.sqrt((a.r-b.r)**2 + (a.g-b.g)**2 + (a.b-b.b)**2);
+  }
+  function sampleFloorCellRgb(imageData, H, col){
+    const offsets = [-0.3, -0.15, 0, 0.15, 0.3];
+    let sr=0, sg=0, sb=0, n=0;
+    for (const dx of offsets){
+      const xc = col + 0.5 + dx * (1 - 2*FLOOR_PATCH_MARGIN);
+      const yc = 0.5;
+      const p = applyHomography(H, xc, yc);
+      const px = getPixel(imageData, p.x, p.y);
+      sr += px.r; sg += px.g; sb += px.b; n++;
+    }
+    return { r: sr/n, g: sg/n, b: sb/n };
+  }
+  function classifyFloorCell(rgb, emptyRgb){
+    const dist = rgbDistance(rgb, emptyRgb);
+    return { filled: dist > FLOOR_OCCUPIED_THRESHOLD, distance: dist };
+  }
+  // compte les cases occupées en partant de la gauche (remplissage physique réel) ; une case occupée
+  // après un "trou" est une anomalie signalée, pas bloquante
+  function runFloorScanPipeline(imageData, H, emptyRgb){
+    const ref = emptyRgb || loadFloorCalibration();
+    const cellResults = [];
+    for (let col = 0; col < 7; col++){
+      const rgb = sampleFloorCellRgb(imageData, H, col);
+      cellResults.push(classifyFloorCell(rgb, ref));
+    }
+    let count = 0;
+    for (const r of cellResults){ if (!r.filled) break; count++; }
+    const anomaly = cellResults.slice(count).some(r => r.filled);
+    return { count, anomaly, cellResults };
+  }
+  // calibration optionnelle : mesure la vraie couleur de fond d'une ligne de plancher vide, sur ce
+  // plateau précis, sous cet éclairage précis — remplace FLOOR_DEFAULT_EMPTY_RGB une fois faite
+  function calibrateFloorEmpty(imageData, H){
+    let sr=0, sg=0, sb=0;
+    for (let col = 0; col < 7; col++){
+      const rgb = sampleFloorCellRgb(imageData, H, col);
+      sr += rgb.r; sg += rgb.g; sb += rgb.b;
+    }
+    const avg = { r: sr/7, g: sg/7, b: sb/7 };
+    saveFloorCalibration(avg);
+    return avg;
+  }
+
+  // -- calibration : fond par défaut + couleurs par défaut, remplaçables par de vraies mesures du plateau --
+  const SCAN_CALIBRATION_KEY = 'azulScanCalibration';
+  function loadScanCalibration(){
+    try{
+      const raw = localStorage.getItem(SCAN_CALIBRATION_KEY);
+      if (raw){
+        const parsed = JSON.parse(raw);
+        return { bg: parsed.bg || SCAN_DEFAULT_BG_HSV, colors: parsed.colors || {} };
+      }
+    }catch(e){}
+    return { bg: SCAN_DEFAULT_BG_HSV, colors: {} };
+  }
+  function saveScanCalibrationPatch(patch){
+    const current = loadScanCalibration();
+    const merged = { bg: patch.bg || current.bg, colors: Object.assign({}, current.colors, patch.colors || {}) };
+    try{ localStorage.setItem(SCAN_CALIBRATION_KEY, JSON.stringify(merged)); }catch(e){}
+  }
+
+  // -- état transitoire de l'overlay (jamais persisté) --
+  let scanState = null; // { sourceCanvas, corners, confirmRows, phase, floorResult, floorSlots }
+  let scanMode = 'scan'; // 'scan' | 'bg' | 'color'
+  let colorCalibIndex = 0;
+  let colorCalibResults = {};
+  let pendingColorSample = null;
+  const SCAN_CANONICAL_PTS = [{x:0,y:0},{x:5,y:0},{x:5,y:5},{x:0,y:5}];
+  const SCAN_MAX_DIM = 1400;
+
+  function updateColorCalibTitle(){
+    document.getElementById('color-calib-title').textContent = `Calibrer : ${COLORS[colorCalibIndex].label}`;
+    document.getElementById('color-calib-preview').style.background = 'var(--card)';
+  }
+
+  function openScanOverlay(mode){
+    scanMode = mode;
+    scanState = { sourceCanvas: null, corners: null, confirmRows: null, phase: 'triangle', floorResult: null, floorCount: 0, floorAnomaly: false };
+    if (mode === 'color'){
+      colorCalibIndex = 0; colorCalibResults = {}; pendingColorSample = null;
+      updateColorCalibTitle();
+      showScanStep('scan-step-color-calib');
+    } else if (mode === 'bg'){
+      document.querySelector('#scan-step-calibrate .scan-title').textContent = 'Calibrer le fond';
+      document.querySelector('#scan-step-calibrate .scan-hint').textContent =
+        'Prends une photo des lignes de motifs VIDES, puis cadre le triangle comme pour un scan normal.';
+    } else {
+      showCalibrateStepForPhase('triangle');
+    }
+    document.getElementById('scan-overlay').classList.add('open');
+    document.getElementById('scan-file-input').click();
+  }
+
+  function showCalibrateStepForPhase(phase){
+    if (phase === 'floor'){
+      document.querySelector('#scan-step-calibrate .scan-title').textContent = 'Cadrer la ligne de plancher';
+      document.querySelector('#scan-step-calibrate .scan-hint').textContent =
+        "Prends une nouvelle photo de la ligne de plancher (les 7 cases de pénalité), puis place les 4 repères sur ses coins : d'abord les 2 coins de gauche, puis les 2 coins de droite.";
+      document.getElementById('btn-scan-skip-floor').style.display = '';
+    } else {
+      document.querySelector('#scan-step-calibrate .scan-title').textContent = 'Cadrer les lignes de motifs';
+      document.querySelector('#scan-step-calibrate .scan-hint').textContent =
+        "Place les 4 repères sur les coins du triangle : d'abord les 2 coins côté ligne courte, puis les 2 coins côté ligne longue (celle proche du mur).";
+      document.getElementById('btn-scan-skip-floor').style.display = 'none';
+    }
+  }
+
+  function closeScanOverlay(){
+    document.getElementById('scan-overlay').classList.remove('open');
+    document.querySelectorAll('.scan-step').forEach(s => s.classList.remove('active'));
+    scanState = null;
+  }
+
+  function showScanStep(id){
+    document.querySelectorAll('.scan-step').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function handleScanFile(file){
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e) => { img.src = e.target.result; };
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      const scale = Math.min(1, SCAN_MAX_DIM / Math.max(w, h));
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      const canvas = document.getElementById('scan-canvas');
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      if (scanMode === 'color'){
+        pendingColorSample = sampleCenterPatch(canvas);
+        document.getElementById('color-calib-preview').style.background = hsvToRgbCss(pendingColorSample);
+        showScanStep('scan-step-color-calib');
+        return;
+      }
+
+      scanState.sourceCanvas = canvas;
+      showScanStep('scan-step-calibrate');
+      placeDefaultHandles();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function confirmColorCalibSample(){
+    if (pendingColorSample == null) return;
+    colorCalibResults[COLORS[colorCalibIndex].id] = pendingColorSample;
+    pendingColorSample = null;
+    colorCalibIndex++;
+    if (colorCalibIndex < COLORS.length){
+      updateColorCalibTitle();
+      document.getElementById('scan-file-input').click();
+    } else {
+      saveScanCalibrationPatch({ colors: colorCalibResults });
+      showToast('Calibration des couleurs enregistrée.');
+      closeScanOverlay();
+    }
+  }
+
+  function retakeColorCalibSample(){
+    pendingColorSample = null;
+    document.getElementById('scan-file-input').click();
+  }
+
+  function placeDefaultHandles(){
+    const wrap = document.getElementById('scan-calib-wrap');
+    const rect = document.getElementById('scan-canvas').getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const offX = rect.left - wrapRect.left, offY = rect.top - wrapRect.top;
+    const insets = [[.22,.15],[.78,.15],[.78,.9],[.22,.9]]; // hg, hd, bd, bg par défaut
+    scanState.corners = insets.map(([fx,fy]) => ({ x: offX + fx*rect.width, y: offY + fy*rect.height }));
+    scanState.corners.forEach((pt, i) => {
+      const el = document.getElementById('scan-handle-' + i);
+      el.style.left = pt.x + 'px'; el.style.top = pt.y + 'px';
+    });
+  }
+
+  function wireScanHandleDragging(){
+    let dragIdx = null;
+    document.querySelectorAll('.scan-handle').forEach(el => {
+      el.addEventListener('pointerdown', (e) => {
+        dragIdx = parseInt(el.dataset.idx, 10);
+        el.setPointerCapture(e.pointerId);
+      });
+    });
+    document.getElementById('scan-calib-wrap').addEventListener('pointermove', (e) => {
+      if (dragIdx === null || !scanState) return;
+      const wrapRect = document.getElementById('scan-calib-wrap').getBoundingClientRect();
+      const x = e.clientX - wrapRect.left, y = e.clientY - wrapRect.top;
+      scanState.corners[dragIdx] = { x, y };
+      const el = document.getElementById('scan-handle-' + dragIdx);
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+    });
+    ['pointerup','pointercancel'].forEach(evt => {
+      document.getElementById('scan-calib-wrap').addEventListener(evt, () => { dragIdx = null; });
+    });
+  }
+
+  function photoPointsFromHandles(canvas){
+    const rect = canvas.getBoundingClientRect();
+    const wrap = document.getElementById('scan-calib-wrap');
+    const wrapRect = wrap.getBoundingClientRect();
+    const offX = rect.left - wrapRect.left, offY = rect.top - wrapRect.top;
+    const scale = canvas.width / rect.width; // même échelle en x et y (ratio préservé par max-width/max-height)
+    return scanState.corners.map(pt => ({
+      x: (pt.x - offX) * scale,
+      y: (pt.y - offY) * scale,
+    }));
+  }
+
+  function validateScanCalibration(){
+    const canvas = scanState.sourceCanvas;
+    const photoPts = photoPointsFromHandles(canvas);
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    if (scanState.phase === 'floor'){
+      const H = solveHomography(FLOOR_CANONICAL_PTS, photoPts);
+      scanState.floorResult = runFloorScanPipeline(imageData, H);
+      scanState.floorCount = scanState.floorResult.count;
+      scanState.floorAnomaly = scanState.floorResult.anomaly;
+      showScanStep('scan-step-confirm');
+      renderScanConfirm();
+      return;
+    }
+
+    if (!cnnModel){
+      showToast(cnnModelError
+        ? "Modèle CNN introuvable — entraîne-le (version_ia/ml) puis place tfjs_model/ à côté de ce fichier."
+        : "Modèle CNN en cours de chargement, réessaie dans un instant.");
+      closeScanOverlay();
+      return;
+    }
+
+    const H = solveHomography(SCAN_CANONICAL_PTS, photoPts);
+    const rows = runScanPipeline(imageData, H);
+    scanState.confirmRows = rows;
+    scanState.phase = 'floor';
+    showCalibrateStepForPhase('floor');
+    showScanStep('scan-step-calibrate');
+    document.getElementById('scan-file-input').click();
+  }
+
+  function skipFloorScan(){
+    scanState.floorResult = null;
+    scanState.floorCount = 0;
+    scanState.floorAnomaly = false;
+    showScanStep('scan-step-confirm');
+    renderScanConfirm();
+  }
+
+  function tapFloorConfirmSlot(i){
+    scanState.floorCount = (i < scanState.floorCount) ? i : i + 1;
+    scanState.floorAnomaly = false;
+    renderScanConfirm();
+  }
+
+  function renderFloorConfirm(){
+    const el = document.getElementById('scan-confirm-floor');
+    const slots = Array.from({length:7}, (_, i) => {
+      const filled = i < scanState.floorCount;
+      return `<div class="scf-slot ${filled?'filled':''}" data-idx="${i}"></div>`;
+    }).join('');
+    el.className = scanState.floorAnomaly ? 'anomaly' : '';
+    el.innerHTML = slots +
+      (scanState.floorAnomaly ? `<div class="scan-anomaly-note">⚠ lecture incertaine sur le plancher — vérifie-la</div>` : '');
+    el.querySelectorAll('.scf-slot').forEach(s => {
+      s.addEventListener('click', () => tapFloorConfirmSlot(parseInt(s.dataset.idx, 10)));
+    });
+  }
+
+  function renderScanConfirm(){
+    const el = document.getElementById('scan-confirm-rows');
+    el.innerHTML = scanState.confirmRows.map((row, r) => {
+      const capacity = r + 1;
+      const slots = Array.from({length:capacity}, (_, i) => {
+        const filled = i < row.count;
+        return `<div class="scr-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[row.color].hex)}` : ''}"></div>`;
+      }).join('');
+      const palette = COLORS.map(c =>
+        `<button style="background:${tileGloss(c.hex)}" data-row="${r}" data-color="${c.id}" title="${c.label}"></button>`
+      ).join('');
+      return `<div class="scan-confirm-row ${row.anomaly?'anomaly':''}" data-row="${r}">
+        <div class="scr-slots">${slots}</div>
+        <div class="scr-palette">${palette}</div>
+        <div class="scr-count">
+          <button data-row="${r}" data-act="dec">−</button>${row.count}<button data-row="${r}" data-act="inc">+</button>
+        </div>
+        ${row.anomaly ? `<div class="scan-anomaly-note">⚠ lecture incertaine sur cette ligne — vérifie-la</div>` : ''}
+      </div>`;
+    }).join('');
+
+    el.querySelectorAll('.scr-palette button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const r = parseInt(btn.dataset.row, 10);
+        const row = scanState.confirmRows[r];
+        row.color = btn.dataset.color;
+        if (row.count === 0) row.count = 1;
+        row.anomaly = false;
+        renderScanConfirm();
+      });
+    });
+    el.querySelectorAll('.scr-count button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const r = parseInt(btn.dataset.row, 10);
+        const row = scanState.confirmRows[r];
+        const capacity = r + 1;
+        if (btn.dataset.act === 'inc') row.count = Math.min(capacity, row.count + 1);
+        else row.count = Math.max(0, row.count - 1);
+        if (row.count === 0) row.color = null;
+        else if (row.color === null) row.color = COLORS[0].id;
+        row.anomaly = false;
+        renderScanConfirm();
+      });
+    });
+    renderFloorConfirm();
+  }
+
+  function commitScanResult(){
+    const player = currentPlayer();
+    scanState.confirmRows.forEach((row, i) => {
+      player.patternLines[i] = { capacity: i+1, color: row.count > 0 ? row.color : null, count: row.count };
+    });
+    player.floorFilled = scanState.floorCount;
+    saveState();
+    closeScanOverlay();
+    renderBoard();
+  }
+
+  function wireScanUI(){
+    document.getElementById('scan-file-input').addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) handleScanFile(e.target.files[0]);
+      e.target.value = '';
+    });
+    wireScanHandleDragging();
+    document.getElementById('btn-scan-validate').addEventListener('click', validateScanCalibration);
+    document.getElementById('btn-scan-retake').addEventListener('click', () => {
+      showScanStep('scan-step-calibrate');
+      document.getElementById('scan-file-input').click();
+    });
+    document.getElementById('btn-scan-confirm').addEventListener('click', commitScanResult);
+    document.getElementById('btn-scan-skip-floor').addEventListener('click', skipFloorScan);
+    document.getElementById('btn-scan-cancel-1').addEventListener('click', closeScanOverlay);
+    document.getElementById('btn-scan-cancel-2').addEventListener('click', closeScanOverlay);
+    document.getElementById('btn-color-calib-next').addEventListener('click', confirmColorCalibSample);
+    document.getElementById('btn-color-calib-retake').addEventListener('click', retakeColorCalibSample);
+    document.getElementById('btn-color-calib-cancel').addEventListener('click', closeScanOverlay);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    init(); wireScanUI(); loadCnnModel();
+    document.getElementById('btn-cnn-retry').addEventListener('click', loadCnnModel);
+  });
+})();
+</script>
+</body>
+</html>

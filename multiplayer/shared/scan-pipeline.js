@@ -171,3 +171,82 @@ function runScanPipeline(imageData, H){
   }
   return rows;
 }
+
+// ================================================================
+// -- détection automatique de la ligne de plancher (7 cases, occupé/vide) --
+// Contrairement aux lignes de motifs, on ne cherche pas QUELLE couleur est posée (une tuile de
+// n'importe quelle couleur en trop compte pareil) — un simple seuillage de distance de couleur
+// suffit, pas besoin d'un second modèle entraîné.
+// ================================================================
+
+// carré canonique dédié : 7 cases sur 1 seule ligne, calibré séparément du triangle des lignes de motifs
+const FLOOR_CANONICAL_PTS = [{x:0,y:0},{x:7,y:0},{x:7,y:1},{x:0,y:1}];
+const FLOOR_PATCH_MARGIN = 0.15;
+
+// estimation par défaut d'un fond de plateau clair, utilisée tant qu'aucune calibration réelle n'existe
+const FLOOR_DEFAULT_EMPTY_RGB = { r: 216, g: 205, b: 182 };
+const FLOOR_OCCUPIED_THRESHOLD = 45; // distance euclidienne RGB au-delà de laquelle on considère la case occupée
+const FLOOR_CALIBRATION_KEY = 'azulFloorCalibration';
+
+function loadFloorCalibration(){
+  try{
+    const raw = localStorage.getItem(FLOOR_CALIBRATION_KEY);
+    if (raw) return JSON.parse(raw);
+  }catch(e){}
+  return FLOOR_DEFAULT_EMPTY_RGB;
+}
+function saveFloorCalibration(rgb){
+  try{ localStorage.setItem(FLOOR_CALIBRATION_KEY, JSON.stringify(rgb)); }catch(e){}
+}
+
+function rgbDistance(a, b){
+  return Math.sqrt((a.r-b.r)**2 + (a.g-b.g)**2 + (a.b-b.b)**2);
+}
+
+// moyenne RGB d'un patch central de la case (col 0..6), via la même homographie/lecture de pixel
+// que extractCellPatch — pas besoin de générer une vraie image ici, juste une couleur moyenne
+function sampleFloorCellRgb(imageData, H, col){
+  const offsets = [-0.3, -0.15, 0, 0.15, 0.3];
+  let sr=0, sg=0, sb=0, n=0;
+  for (const dx of offsets){
+    const xc = col + 0.5 + dx * (1 - 2*FLOOR_PATCH_MARGIN);
+    const yc = 0.5;
+    const p = applyHomography(H, xc, yc);
+    const px = getPixel(imageData, p.x, p.y);
+    sr += px.r; sg += px.g; sb += px.b; n++;
+  }
+  return { r: sr/n, g: sg/n, b: sb/n };
+}
+
+function classifyFloorCell(rgb, emptyRgb){
+  const dist = rgbDistance(rgb, emptyRgb);
+  return { filled: dist > FLOOR_OCCUPIED_THRESHOLD, distance: dist };
+}
+
+// compte les cases occupées en partant de la gauche (remplissage physique réel) ; une case occupée
+// après un "trou" (case vide suivie d'une case occupée) est une anomalie signalée, pas bloquante
+function runFloorScanPipeline(imageData, H, emptyRgb){
+  const ref = emptyRgb || loadFloorCalibration();
+  const cellResults = [];
+  for (let col = 0; col < 7; col++){
+    const rgb = sampleFloorCellRgb(imageData, H, col);
+    cellResults.push(classifyFloorCell(rgb, ref));
+  }
+  let count = 0;
+  for (const r of cellResults){ if (!r.filled) break; count++; }
+  const anomaly = cellResults.slice(count).some(r => r.filled);
+  return { count, anomaly, cellResults };
+}
+
+// calibration optionnelle : mesure la vraie couleur de fond d'une ligne de plancher vide, sur ce
+// plateau précis, sous cet éclairage précis — remplace FLOOR_DEFAULT_EMPTY_RGB une fois faite
+function calibrateFloorEmpty(imageData, H){
+  let sr=0, sg=0, sb=0;
+  for (let col = 0; col < 7; col++){
+    const rgb = sampleFloorCellRgb(imageData, H, col);
+    sr += rgb.r; sg += rgb.g; sb += rgb.b;
+  }
+  const avg = { r: sr/7, g: sg/7, b: sb/7 };
+  saveFloorCalibration(avg);
+  return avg;
+}

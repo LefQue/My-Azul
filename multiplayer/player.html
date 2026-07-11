@@ -50,6 +50,7 @@
     </div>
     <div class="scan-actions">
       <button id="btn-scan-cancel-1" class="danger">Annuler</button>
+      <button id="btn-scan-skip-floor" style="display:none">Passer le plancher</button>
       <button id="btn-scan-validate" class="primary">Valider le cadrage</button>
     </div>
   </div>
@@ -58,6 +59,8 @@
     <p class="scan-title">Vérifier la lecture</p>
     <p class="scan-hint">Corrige au besoin avant de confirmer : rien n'est encore enregistré.</p>
     <div id="scan-confirm-rows"></div>
+    <p class="scan-title" style="margin-top:14px">Ligne de plancher</p>
+    <div id="scan-confirm-floor"></div>
     <div class="scan-actions">
       <button id="btn-scan-cancel-2" class="danger">Annuler</button>
       <button id="btn-scan-retake">Reprendre la photo</button>
@@ -261,9 +264,24 @@
   }
 
   function openScanOverlay(){
-    scanState = { sourceCanvas: null, corners: null, confirmRows: null };
+    scanState = { sourceCanvas: null, corners: null, confirmRows: null, phase: 'triangle', floorResult: null, floorCount: 0, floorAnomaly: false };
+    showCalibrateStepForPhase('triangle');
     document.getElementById('scan-overlay').classList.add('open');
     document.getElementById('scan-file-input').click();
+  }
+
+  function showCalibrateStepForPhase(phase){
+    if (phase === 'floor'){
+      document.querySelector('#scan-step-calibrate .scan-title').textContent = 'Cadrer la ligne de plancher';
+      document.querySelector('#scan-step-calibrate .scan-hint').textContent =
+        "Prends une nouvelle photo de la ligne de plancher (les 7 cases de pénalité), puis place les 4 repères sur ses coins : d'abord les 2 coins de gauche, puis les 2 coins de droite.";
+      document.getElementById('btn-scan-skip-floor').style.display = '';
+    } else {
+      document.querySelector('#scan-step-calibrate .scan-title').textContent = 'Cadrer les lignes de motifs';
+      document.querySelector('#scan-step-calibrate .scan-hint').textContent =
+        "Place les 4 repères sur les coins du triangle : d'abord les 2 coins côté ligne courte, puis les 2 coins côté ligne longue (celle proche du mur).";
+      document.getElementById('btn-scan-skip-floor').style.display = 'none';
+    }
   }
 
   function closeScanOverlay(){
@@ -330,20 +348,33 @@
     });
   }
 
-  function validateScanCalibration(){
-    const canvas = scanState.sourceCanvas;
+  function photoPointsFromHandles(canvas){
     const rect = canvas.getBoundingClientRect();
     const wrap = document.getElementById('scan-calib-wrap');
     const wrapRect = wrap.getBoundingClientRect();
     const offX = rect.left - wrapRect.left, offY = rect.top - wrapRect.top;
     const scale = canvas.width / rect.width;
-    const photoPts = scanState.corners.map(pt => ({
+    return scanState.corners.map(pt => ({
       x: (pt.x - offX) * scale,
       y: (pt.y - offY) * scale,
     }));
-    const H = solveHomography(SCAN_CANONICAL_PTS, photoPts);
+  }
+
+  function validateScanCalibration(){
+    const canvas = scanState.sourceCanvas;
+    const photoPts = photoPointsFromHandles(canvas);
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    if (scanState.phase === 'floor'){
+      const H = solveHomography(FLOOR_CANONICAL_PTS, photoPts);
+      scanState.floorResult = runFloorScanPipeline(imageData, H);
+      scanState.floorCount = scanState.floorResult.count;
+      scanState.floorAnomaly = scanState.floorResult.anomaly;
+      showScanStep('scan-step-confirm');
+      renderScanConfirm();
+      return;
+    }
 
     if (!cnnModel){
       showToast(cnnModelError
@@ -353,9 +384,40 @@
       return;
     }
 
+    const H = solveHomography(SCAN_CANONICAL_PTS, photoPts);
     scanState.confirmRows = runScanPipeline(imageData, H);
+    scanState.phase = 'floor';
+    showCalibrateStepForPhase('floor');
+    showScanStep('scan-step-calibrate');
+    document.getElementById('scan-file-input').click();
+  }
+
+  function skipFloorScan(){
+    scanState.floorResult = null;
+    scanState.floorCount = 0;
+    scanState.floorAnomaly = false;
     showScanStep('scan-step-confirm');
     renderScanConfirm();
+  }
+
+  function tapFloorConfirmSlot(i){
+    scanState.floorCount = (i < scanState.floorCount) ? i : i + 1;
+    scanState.floorAnomaly = false;
+    renderScanConfirm();
+  }
+
+  function renderFloorConfirm(){
+    const el = document.getElementById('scan-confirm-floor');
+    const slots = Array.from({length:7}, (_, i) => {
+      const filled = i < scanState.floorCount;
+      return `<div class="scf-slot ${filled?'filled':''}" data-idx="${i}"></div>`;
+    }).join('');
+    el.className = scanState.floorAnomaly ? 'anomaly' : '';
+    el.innerHTML = slots +
+      (scanState.floorAnomaly ? `<div class="scan-anomaly-note">⚠ lecture incertaine sur le plancher — vérifie-la</div>` : '');
+    el.querySelectorAll('.scf-slot').forEach(s => {
+      s.addEventListener('click', () => tapFloorConfirmSlot(parseInt(s.dataset.idx, 10)));
+    });
   }
 
   function renderScanConfirm(){
@@ -402,12 +464,13 @@
         renderScanConfirm();
       });
     });
+    renderFloorConfirm();
   }
 
   async function commitScanResult(){
     const newLines = scanState.confirmRows.map((row, i) =>
       ({ capacity: i+1, color: row.count > 0 ? row.color : null, count: row.count }));
-    await updateMyRow({ pattern_lines: newLines });
+    await updateMyRow({ pattern_lines: newLines, floor_filled: scanState.floorCount });
     closeScanOverlay();
   }
 
@@ -423,6 +486,7 @@
       document.getElementById('scan-file-input').click();
     });
     document.getElementById('btn-scan-confirm').addEventListener('click', commitScanResult);
+    document.getElementById('btn-scan-skip-floor').addEventListener('click', skipFloorScan);
     document.getElementById('btn-scan-cancel-1').addEventListener('click', closeScanOverlay);
     document.getElementById('btn-scan-cancel-2').addEventListener('click', closeScanOverlay);
     document.getElementById('btn-cnn-retry').addEventListener('click', () =>
