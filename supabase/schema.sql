@@ -11,6 +11,9 @@ create table if not exists games (
   phase           text not null default 'lobby',   -- lobby | playing | resolving | ended
   current_round   int  not null default 1,
   max_players     int  not null default 4 check (max_players between 2 and 4),
+  -- base = jeu de base (mur fixe) ; mosaic_free = mosaïque libre (choix de colonne en fin de manche) ;
+  -- mosaic_a/mosaic_b = mosaïque éclatante faces 1/2 (mur fixe, ×2 ou bonus changés)
+  game_mode       text not null default 'base' check (game_mode in ('base','mosaic_free','mosaic_a','mosaic_b')),
   resolving_since timestamptz,
   created_at      timestamptz not null default now()
 );
@@ -30,6 +33,9 @@ create table if not exists players (
   round_history            jsonb not null default '[]',
   final_bonuses            jsonb,
   ready                    boolean not null default false,
+  -- mosaïque libre uniquement : { "<row>": <col> } choisi par le joueur avant de passer "Prêt", pour
+  -- que le client qui gagne la résolution de manche n'ait jamais à décider à la place d'un autre joueur
+  pending_column_choices   jsonb not null default '{}'::jsonb,
   updated_at               timestamptz not null default now(),
   unique (game_id, slot_index)
 );
@@ -91,6 +97,7 @@ begin
     total_score             = r.total_score,
     round_history           = p.round_history || r.round_history_entry,
     ready                   = false,
+    pending_column_choices  = '{}'::jsonb,
     updated_at              = now()
   from jsonb_to_recordset(p_results)
     as r(id uuid, wall jsonb, pattern_lines jsonb, floor_filled int, total_score int, round_history_entry jsonb)

@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#141b29" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjZjJlOWQ4Ii8+CjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcng9IjEyIiBmaWxsPSJub25lIiBzdHJva2U9IiMxZDRjNzgiIHN0cm9rZS13aWR0aD0iMi41Ii8+CjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWQ0Yzc4IiB0cmFuc2Zvcm09InJvdGF0ZSg0NSAyMyAyMykiLz4KPHJlY3QgeD0iMzQiIHk9IjE2IiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIGZpbGw9IiNjOTkzMmMiIHRyYW5zZm9ybT0icm90YXRlKDQ1IDQxIDIzKSIvPgo8cmVjdCB4PSIxNiIgeT0iMzQiIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgZmlsbD0iI2I4NTYyZiIgdHJhbnNmb3JtPSJyb3RhdGUoNDUgMjMgNDEpIi8+CjxyZWN0IHg9IjM0IiB5PSIzNCIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWY4ZjhmIiB0cmFuc2Zvcm09InJvdGF0ZSg0NSA0MSA0MSkiLz4KPC9zdmc+Cg==">
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjZjJlOWQ4Ii8+CjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcng9IjEyIiBmaWxsPSJub25lIiBzdHJva2U9IiMxZDRjNzgiIHN0cm9rZS13aWR0aD0iMi41Ii8+CjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWQ0Yzc4IiB0cmFuc2Zvcm09InJvdGF0ZSg0NSAyMyAyMykiLz4KPHJlY3QgeD0iMzQiIHk9IjE2IiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIGZpbGw9IiNjOTkzMmMiIHRyYW5zZm9ybT0icm90YXRlKDQ1IDQxIDIzKSIvPgo8cmVjdCB4PSIxNiIgeT0iMzQiIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgZmlsbD0iI2I4NTYyZiIgdHJhbnNmb3JtPSJyb3RhdGUoNDUgMjMgNDEpIi8+CjxyZWN0IHg9IjM0IiB5PSIzNCIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWY4ZjhmIiB0cmFuc2Zvcm09InJvdGF0ZSg0NSA0MSA0MSkiLz4KPC9zdmc+Cg==">
-<title>Azul – Mosaïque éclatante (scan)</title>
+<title>Azul – Mosaïque libre (scan)</title>
 <style>
   :root{
     color-scheme: light dark;
@@ -86,7 +86,6 @@
   .setup-card{ margin-top:6px; animation:fadeSlideUp .6s ease .05s both; }
   .setup-card > p{ font-size:.78rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin:0 0 8px; }
   #player-count-selector{ display:flex; gap:8px; margin:8px 0 18px; }
-  #mosaic-face-selector{ display:flex; gap:8px; margin:8px 0 18px; }
   .count-btn{
     flex:1; min-height:46px; border-radius:8px; border:1px solid var(--border); background:transparent;
     color:var(--text); font-size:1.05rem; font-family:var(--font-display); transition:transform .12s ease;
@@ -155,12 +154,7 @@
   /* --- wall --- */
   .wall-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:5px; max-width:230px; margin:6px auto 0; }
   .wall-cell{
-    position:relative; aspect-ratio:1/1; border-radius:4px; border:1px solid var(--border);
-  }
-  .wall-x2-badge{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    font-size:.85rem; font-weight:700; font-family:var(--font-display); color:#fff;
-    text-shadow:0 1px 3px rgba(0,0,0,.9), 0 0 4px rgba(0,0,0,.7); pointer-events:none;
+    aspect-ratio:1/1; border-radius:4px; border:1px solid var(--border);
   }
 
   /* --- floor line --- */
@@ -214,6 +208,14 @@
     margin-top:16px; width:100%; min-height:46px; border-radius:8px; border:none; background:var(--accent);
     color:var(--card); font-family:var(--font-display); letter-spacing:.08em; text-transform:uppercase; font-size:.85rem;
   }
+  .modal-content button.danger{ background:var(--floor-fill); }
+  #column-choice-cells{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; max-width:260px; margin:12px auto; }
+  .col-choice-cell{
+    aspect-ratio:1/1; border-radius:6px; border:1px solid var(--border); background:var(--bg);
+  }
+  .col-choice-cell.valid{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset; }
+  .col-choice-cell.valid:active{ transform:scale(.92); }
+  .col-choice-cell.invalid{ opacity:.3; }
 
   /* --- results --- */
   #results h1{ text-align:center; }
@@ -316,7 +318,7 @@
 <div id="app">
 
   <section id="screen-setup" class="screen">
-    <h1 class="wordmark">Azul<span class="wordmark-sub">Mosaïque éclatante</span></h1>
+    <h1 class="wordmark">Azul<span class="wordmark-sub">Mosaïque libre</span></h1>
     <div class="wordmark-rule"><span></span><span></span><span></span></div>
     <div id="resume-banner" class="tile-card" style="display:none">
       <p>Une partie est en cours.</p>
@@ -326,8 +328,6 @@
       </div>
     </div>
     <div class="setup-card tile-card">
-      <p>Face du plateau</p>
-      <div id="mosaic-face-selector"></div>
       <p>Nombre de joueurs</p>
       <div id="player-count-selector"></div>
       <div id="player-name-inputs"></div>
@@ -364,6 +364,16 @@
     <h2>Résumé de la manche</h2>
     <div id="round-summary-body"></div>
     <button id="btn-close-summary">Fermer</button>
+  </div>
+</div>
+
+<div id="column-choice-modal" class="modal">
+  <div class="modal-content tile-card">
+    <h2>Choisir la colonne</h2>
+    <p id="column-choice-title" style="color:var(--text)"></p>
+    <div id="column-choice-cells"></div>
+    <p class="scan-hint">Plusieurs colonnes sont encore possibles pour cette couleur — choisis celle où la tuile atterrit sur le mur.</p>
+    <button id="btn-column-choice-cancel" class="danger">Annuler la manche</button>
   </div>
 </div>
 
@@ -413,7 +423,7 @@
 </div>
 
 <script src="../version_ia/tfjs/tf.min.js"></script>
-<script src="shared/mosaic-data.js"></script>
+<script src="shared/mosaic-free-data.js"></script>
 <script>
 (function(){
   "use strict";
@@ -427,21 +437,14 @@
   ];
   const COLOR_MAP = Object.fromEntries(COLORS.map(c => [c.id, c]));
 
-  // motif fixe du mur : chaque ligne est une rotation cyclique de la précédente
-  const WALL_PATTERN = [
-    ['B','Y','R','K','W'],
-    ['W','B','Y','R','K'],
-    ['K','W','B','Y','R'],
-    ['R','K','W','B','Y'],
-    ['Y','R','K','W','B'],
-  ];
+  // pas de WALL_PATTERN fixe ici : la mosaïque libre laisse le joueur choisir la colonne à la fin
+  // de la manche (voir shared/mosaic-free-data.js), seule contrainte = 1 couleur par ligne/colonne.
   const FLOOR_PENALTIES = [-1,-1,-2,-2,-2,-3,-3];
-  const STORAGE_KEY = 'azulMosaicScoreState';
+  const STORAGE_KEY = 'azulMosaicFreeScoreState';
 
   let gameState = null;
   let lastSnapshot = null;
   let setupPlayerCount = 2;
-  let setupMosaicFace = 'A';
 
   // ---------- persistence ----------
   function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState)); }catch(e){} }
@@ -464,8 +467,6 @@
   function currentPlayer(){ return gameState.players[gameState.currentPlayerIndex]; }
 
   // ---------- scoring engine ----------
-  function wallColumnFor(row, color){ return WALL_PATTERN[row].indexOf(color); }
-
   function runLength(wall, row, col, dRow, dCol){
     let r = row, c = col, count = 0;
     while (r >= 0 && r < 5 && c >= 0 && c < 5 && wall[r][c] !== null){
@@ -487,32 +488,9 @@
     return FLOOR_PENALTIES.slice(0, filledCount).reduce((s,v) => s+v, 0);
   }
 
-  function endRoundForPlayer(player, round){
-    const completed = [];
-    let wallScore = 0;
-    player.patternLines.forEach((line, row) => {
-      if (line.count === line.capacity && line.color !== null){
-        const col = wallColumnFor(row, line.color);
-        if (player.wall[row][col] !== null){
-          line.color = null; line.count = 0;
-          return;
-        }
-        player.wall[row][col] = line.color;
-        const points = scoreTilePlacement(player.wall, row, col) * mosaicMultiplierFor(gameState.mosaicFace, row, col);
-        wallScore += points;
-        completed.push({ row, color:line.color, col, points });
-        line.color = null; line.count = 0;
-      }
-    });
-    const floorPenalty = sumFloorPenalty(player.floorFilled);
-    player.floorFilled = 0;
-    player.hasFirstPlayerMarker = false;
-    const rawDelta = wallScore + floorPenalty;
-    // le total cumulé ne peut jamais descendre sous 0 (règle officielle) ; on clampe le cumul, pas le delta de la manche
-    const newTotal = Math.max(0, player.totalScore + rawDelta);
-    player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed });
-    player.totalScore = newTotal;
-  }
+  // endRoundForPlayer (mur fixe) est remplacé ici par endRoundForPlayerFreeWall (voir
+  // shared/mosaic-free-data.js), qui accepte les choix de colonne collectés via la file d'attente
+  // ci-dessous avant de finaliser la manche.
 
   function computeEndGameBonuses(player){
     const wall = player.wall;
@@ -524,8 +502,7 @@
       for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) if (wall[r][c] === color) count++;
       if (count === 5) colors++;
     }
-    const b = MOSAIC_BONUSES[gameState.mosaicFace];
-    const bonusPoints = rows*b.row + cols*b.col + colors*b.color;
+    const bonusPoints = rows*2 + cols*7 + colors*10;
     player.finalBonuses = { rows, cols, colors, bonusPoints };
     player.totalScore += bonusPoints;
   }
@@ -558,20 +535,6 @@
   }
 
   // ---------- setup screen ----------
-  function renderMosaicFaceSelector(){
-    const el = document.getElementById('mosaic-face-selector');
-    el.innerHTML = '';
-    [
-      { id: 'A', label: 'Face 1 (×2)' },
-      { id: 'B', label: 'Face 2 (bonus+)' },
-    ].forEach(f => {
-      const btn = document.createElement('button');
-      btn.textContent = f.label;
-      btn.className = 'count-btn' + (f.id === setupMosaicFace ? ' active' : '');
-      btn.addEventListener('click', () => { setupMosaicFace = f.id; renderMosaicFaceSelector(); });
-      el.appendChild(btn);
-    });
-  }
   function renderPlayerCountSelector(){
     const el = document.getElementById('player-count-selector');
     el.innerHTML = '';
@@ -598,7 +561,7 @@
   }
   function startNewGame(){
     const names = Array.from(document.querySelectorAll('.name-input')).map((inp,i) => inp.value.trim() || `Joueur ${i+1}`);
-    gameState = { players: names.map(createPlayer), currentRound:1, currentPlayerIndex:0, phase:'playing', mosaicFace: setupMosaicFace };
+    gameState = { players: names.map(createPlayer), currentRound:1, currentPlayerIndex:0, phase:'playing' };
     lastSnapshot = null;
     saveState();
     showScreen('screen-playing');
@@ -638,8 +601,7 @@
         return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}"></div>`;
       }).join('');
       const swatches = COLORS.map(c => {
-        const col = wallColumnFor(row, c.id);
-        const disabledHint = player.wall[row][col] !== null;
+        const disabledHint = freeWallValidColumns(player.wall, row, c.id).length === 0;
         return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}"></button>`;
       }).join('');
       return `<div class="pattern-row">
@@ -650,12 +612,8 @@
 
     const wallHtml = `<div class="wall-grid">` + player.wall.map((rowArr, r) =>
       rowArr.map((cell, c) => {
-        const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
-        const style = cell !== null
-          ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
-          : `background:${hexToRgba(patternHex,0.16)}; border:1px dashed ${hexToRgba(patternHex,0.45)};`;
-        const badge = mosaicMultiplierFor(gameState.mosaicFace, r, c) === 2 ? `<span class="wall-x2-badge">×2</span>` : '';
-        return `<div class="wall-cell" style="${style}">${badge}</div>`;
+        const style = cell !== null ? `background:${tileGloss(COLOR_MAP[cell].hex)}` : '';
+        return `<div class="wall-cell" style="${style}"></div>`;
       }).join('')
     ).join('') + `</div>`;
 
@@ -719,9 +677,8 @@
       return;
     }
 
-    const col = wallColumnFor(rowIndex, colorId);
-    if (player.wall[rowIndex][col] !== null){
-      showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur.`);
+    if (freeWallValidColumns(player.wall, rowIndex, colorId).length === 0){
+      showToast(`${COLOR_MAP[colorId].label} n'a plus de colonne valide sur cette ligne du mur.`);
     }
     if (line.color !== null && line.color !== colorId){
       showToast(`Ligne remplacée : ${COLOR_MAP[line.color].label} → ${COLOR_MAP[colorId].label}`);
@@ -770,6 +727,60 @@
     document.getElementById('round-summary-modal').style.display = 'flex';
   }
 
+  // ---------- choix de colonne (mosaïque libre) ----------
+  // Traité joueur par joueur, ligne par ligne, dans le même ordre que endRoundForPlayerFreeWall
+  // (voir collectFreeWallColumnChoices dans shared/mosaic-free-data.js) : le choix d'une colonne
+  // pour une ligne peut invalider une colonne encore "libre" pour une ligne suivante, donc on ne
+  // peut pas précalculer toutes les ambiguïtés à l'avance sur le mur d'origine.
+  let cancelRoundEnd = null;
+
+  function showColumnChoiceModal(playerName, row, color, validCols, workingWall){
+    return new Promise((resolve, reject) => {
+      cancelRoundEnd = () => {
+        document.getElementById('column-choice-modal').style.display = 'none';
+        reject(new Error('cancelled'));
+      };
+      document.getElementById('column-choice-title').textContent =
+        `${escapeHtml(playerName)} — Ligne ${row+1} (${COLOR_MAP[color].label})`;
+      const cellsEl = document.getElementById('column-choice-cells');
+      cellsEl.innerHTML = Array.from({length:5}, (_, c) => {
+        const valid = validCols.includes(c);
+        const occupied = workingWall[row][c];
+        const style = occupied ? `background:${tileGloss(COLOR_MAP[occupied].hex)}` : '';
+        return `<button class="col-choice-cell ${valid?'valid':'invalid'}" data-col="${c}" style="${style}" ${valid?'':'disabled'}></button>`;
+      }).join('');
+      cellsEl.querySelectorAll('.col-choice-cell.valid').forEach(btn => {
+        btn.addEventListener('click', () => {
+          cancelRoundEnd = null;
+          document.getElementById('column-choice-modal').style.display = 'none';
+          resolve(parseInt(btn.dataset.col, 10));
+        });
+      });
+      document.getElementById('column-choice-modal').style.display = 'flex';
+    });
+  }
+
+  async function finalizeRound(){
+    const round = gameState.currentRound;
+    try{
+    const summaries = [];
+    for (const player of gameState.players){
+      const choices = await collectFreeWallColumnChoices(player,
+        (row, color, validCols, workingWall) => showColumnChoiceModal(player.name, row, color, validCols, workingWall));
+      endRoundForPlayerFreeWall(player, round, choices);
+      summaries.push(player.roundHistory[player.roundHistory.length - 1]);
+    }
+    gameState.currentRound += 1;
+    saveState();
+    renderPlaying();
+    showRoundSummary(summaries);
+    }catch(e){
+      if (e.message !== 'cancelled') throw e;
+      if (lastSnapshot){ gameState = lastSnapshot; lastSnapshot = null; }
+      renderPlaying();
+    }
+  }
+
   // ---------- results screen ----------
   function renderResults(){
     const el = document.getElementById('results');
@@ -780,12 +791,11 @@
     el.innerHTML = `<h1>Résultats finaux</h1>` + sorted.map((p,i) => {
       const isWinner = p.totalScore === maxScore;
       const b = p.finalBonuses || { rows:0, cols:0, colors:0, bonusPoints:0 };
-      const bc = MOSAIC_BONUSES[gameState.mosaicFace];
       return `<div class="result-row ${isWinner?'winner':''}" style="animation-delay:${i*80}ms">
         <span class="rank">#${i+1}${isWinner?' 👑':''}</span>
         <span class="rname">${escapeHtml(p.name)}</span>
         <span class="rscore">${p.totalScore} pts</span>
-        <div class="rbonus">Bonus : ${b.rows} ligne(s) (+${b.rows*bc.row}), ${b.cols} colonne(s) (+${b.cols*bc.col}), ${b.colors} couleur(s) (+${b.colors*bc.color})</div>
+        <div class="rbonus">Bonus : ${b.rows} ligne(s) (+${b.rows*2}), ${b.cols} colonne(s) (+${b.cols*7}), ${b.colors} couleur(s) (+${b.colors*10})</div>
       </div>`;
     }).join('');
   }
@@ -811,22 +821,13 @@
       });
     }
 
-    renderMosaicFaceSelector();
     renderPlayerCountSelector();
     renderNameInputs();
     document.getElementById('btn-start').addEventListener('click', startNewGame);
 
     document.getElementById('btn-end-round').addEventListener('click', () => {
       lastSnapshot = JSON.parse(JSON.stringify(gameState));
-      const round = gameState.currentRound;
-      const summaries = gameState.players.map(p => {
-        endRoundForPlayer(p, round);
-        return p.roundHistory[p.roundHistory.length - 1];
-      });
-      gameState.currentRound += 1;
-      saveState();
-      renderPlaying();
-      showRoundSummary(summaries);
+      finalizeRound();
     });
 
     document.getElementById('btn-undo').addEventListener('click', () => {
@@ -836,6 +837,10 @@
         saveState();
         renderPlaying();
       }
+    });
+
+    document.getElementById('btn-column-choice-cancel').addEventListener('click', () => {
+      if (cancelRoundEnd) cancelRoundEnd();
     });
 
     document.getElementById('btn-close-summary').addEventListener('click', () => {

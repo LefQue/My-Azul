@@ -54,13 +54,20 @@
   }
 
   function renderMiniWall(wall){
+    const isFreeMode = game && game.game_mode === 'mosaic_free';
     return `<div class="wall-grid mini">` + wall.map((rowArr, r) =>
       rowArr.map((cell, c) => {
-        const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
-        const style = cell !== null
-          ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
-          : `background:${hexToRgba(patternHex,0.16)};`;
-        return `<div class="wall-cell" style="${style}"></div>`;
+        let style;
+        if (isFreeMode){
+          style = cell !== null ? `background:${tileGloss(COLOR_MAP[cell].hex)}` : '';
+        } else {
+          const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
+          style = cell !== null
+            ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
+            : `background:${hexToRgba(patternHex,0.16)};`;
+        }
+        const badge = mosaicMultiplierFor(game && game.game_mode, r, c) === 2 ? `<span class="wall-x2-badge">×2</span>` : '';
+        return `<div class="wall-cell" style="${style}">${badge}</div>`;
       }).join('')
     ).join('') + `</div>`;
   }

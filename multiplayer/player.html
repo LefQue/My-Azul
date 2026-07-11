@@ -14,6 +14,26 @@
   #round-badge .rb-num{ font-family:var(--font-display); font-size:1.2rem; color:var(--accent); line-height:1; }
   #round-badge .rb-label{ font-size:.5rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
   #actions{ display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+
+  /* --- choix de colonne (mosaïque libre) --- */
+  .modal{ position:fixed; inset:0; background:rgba(20,15,5,.55); display:none; align-items:center; justify-content:center; z-index:150; padding:16px; }
+  .modal-content{
+    background:var(--card); padding:22px; border-radius:12px; max-width:90vw; max-height:80vh; overflow:auto;
+    border:1px solid var(--border);
+  }
+  .modal-content h2{ margin-top:0; }
+  .modal-content button{
+    margin-top:16px; width:100%; min-height:46px; border-radius:8px; border:none; background:var(--accent);
+    color:var(--card); font-family:var(--font-display); letter-spacing:.08em; text-transform:uppercase; font-size:.85rem;
+  }
+  .modal-content button.danger{ background:var(--floor-fill); }
+  #column-choice-cells{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; max-width:260px; margin:12px auto; }
+  .col-choice-cell{
+    aspect-ratio:1/1; border-radius:6px; border:1px solid var(--border); background:var(--bg);
+  }
+  .col-choice-cell.valid{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset; }
+  .col-choice-cell.valid:active{ transform:scale(.92); }
+  .col-choice-cell.invalid{ opacity:.3; }
 </style>
 </head>
 <body>
@@ -34,6 +54,16 @@
   </div>
 </div>
 <div id="toast" class="toast"></div>
+
+<div id="column-choice-modal" class="modal">
+  <div class="modal-content tile-card">
+    <h2>Choisir la colonne</h2>
+    <p id="column-choice-title" style="color:var(--text)"></p>
+    <div id="column-choice-cells"></div>
+    <p class="scan-hint">Plusieurs colonnes sont encore possibles pour cette couleur — choisis celle où la tuile atterrit sur le mur.</p>
+    <button id="btn-column-choice-cancel" class="danger">Annuler</button>
+  </div>
+</div>
 
 <input type="file" id="scan-file-input" accept="image/*" capture="environment" style="display:none">
 
@@ -125,9 +155,15 @@
       return;
     }
 
-    const col = wallColumnFor(rowIndex, colorId);
-    if (myRow.wall[rowIndex][col] !== null){
-      showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur.`);
+    if (myGame.game_mode === 'mosaic_free'){
+      if (freeWallValidColumns(myRow.wall, rowIndex, colorId).length === 0){
+        showToast(`${COLOR_MAP[colorId].label} n'a plus de colonne valide sur cette ligne du mur.`);
+      }
+    } else {
+      const col = wallColumnFor(rowIndex, colorId);
+      if (myRow.wall[rowIndex][col] !== null){
+        showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur.`);
+      }
     }
     const newLines = myRow.pattern_lines.map((l, i) => i !== rowIndex ? l : (
       (l.color !== null && l.color !== colorId)
@@ -168,9 +204,11 @@
         const filled = i >= line.capacity - line.count;
         return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}"></div>`;
       }).join('');
+      const isFreeMode = myGame.game_mode === 'mosaic_free';
       const swatches = COLORS.map(c => {
-        const col = wallColumnFor(row, c.id);
-        const disabledHint = myRow.wall[row][col] !== null;
+        const disabledHint = isFreeMode
+          ? freeWallValidColumns(myRow.wall, row, c.id).length === 0
+          : myRow.wall[row][wallColumnFor(row, c.id)] !== null;
         return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}"></button>`;
       }).join('');
       return `<div class="pattern-row">
@@ -181,11 +219,17 @@
 
     const wallHtml = `<div class="wall-grid">` + myRow.wall.map((rowArr, r) =>
       rowArr.map((cell, c) => {
-        const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
-        const style = cell !== null
-          ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
-          : `background:${hexToRgba(patternHex,0.16)}; border:1px dashed ${hexToRgba(patternHex,0.45)};`;
-        return `<div class="wall-cell" style="${style}"></div>`;
+        let style;
+        if (myGame.game_mode === 'mosaic_free'){
+          style = cell !== null ? `background:${tileGloss(COLOR_MAP[cell].hex)}` : '';
+        } else {
+          const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
+          style = cell !== null
+            ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
+            : `background:${hexToRgba(patternHex,0.16)}; border:1px dashed ${hexToRgba(patternHex,0.45)};`;
+        }
+        const badge = mosaicMultiplierFor(myGame.game_mode, r, c) === 2 ? `<span class="wall-x2-badge">×2</span>` : '';
+        return `<div class="wall-cell" style="${style}">${badge}</div>`;
       }).join('')
     ).join('') + `</div>`;
 
@@ -225,10 +269,51 @@
     btnReady.classList.toggle('is-ready', myRow.ready);
   }
 
+  // Mosaïque libre : si la manche a des lignes de motifs complètes avec plusieurs colonnes encore
+  // valides, ce joueur les résout lui-même AVANT de passer "Prêt" (jamais un autre appareil à sa
+  // place) — voir collectFreeWallColumnChoices dans shared/scoring-engine.js. Les choix sont écrits
+  // atomiquement avec ready=true (toggleReady) pour qu'aucun autre client ne puisse résoudre la
+  // manche avec des choix partiels.
+  function showColumnChoiceModal(row, color, validCols, workingWall){
+    return new Promise((resolve, reject) => {
+      cancelColumnChoice = () => {
+        document.getElementById('column-choice-modal').style.display = 'none';
+        reject(new Error('cancelled'));
+      };
+      document.getElementById('column-choice-title').textContent = `Ligne ${row+1} (${COLOR_MAP[color].label})`;
+      const cellsEl = document.getElementById('column-choice-cells');
+      cellsEl.innerHTML = Array.from({length:5}, (_, c) => {
+        const valid = validCols.includes(c);
+        const occupied = workingWall[row][c];
+        const style = occupied ? `background:${tileGloss(COLOR_MAP[occupied].hex)}` : '';
+        return `<button class="col-choice-cell ${valid?'valid':'invalid'}" data-col="${c}" style="${style}" ${valid?'':'disabled'}></button>`;
+      }).join('');
+      cellsEl.querySelectorAll('.col-choice-cell.valid').forEach(btn => {
+        btn.addEventListener('click', () => {
+          cancelColumnChoice = null;
+          document.getElementById('column-choice-modal').style.display = 'none';
+          resolve(parseInt(btn.dataset.col, 10));
+        });
+      });
+      document.getElementById('column-choice-modal').style.display = 'flex';
+    });
+  }
+  let cancelColumnChoice = null;
+
   async function onReadyClick(){
     try{
-      await toggleReady(gameId, playerId, !myRow.ready, myGame.current_round);
+      if (myRow.ready){
+        await toggleReady(gameId, playerId, false, myGame.current_round);
+        return;
+      }
+      let pendingColumnChoices = undefined;
+      if (myGame.game_mode === 'mosaic_free'){
+        const player = toLegacyPlayerShape(myRow);
+        pendingColumnChoices = await collectFreeWallColumnChoices(player, showColumnChoiceModal);
+      }
+      await toggleReady(gameId, playerId, true, myGame.current_round, pendingColumnChoices);
     }catch(e){
+      if (e.message === 'cancelled') return;
       showToast('Erreur : ' + (e.message || e));
       console.error(e);
     }
@@ -520,6 +605,9 @@
   }
 
   document.getElementById('btn-ready').addEventListener('click', onReadyClick);
+  document.getElementById('btn-column-choice-cancel').addEventListener('click', () => {
+    if (cancelColumnChoice) cancelColumnChoice();
+  });
   document.getElementById('btn-end-game').addEventListener('click', onEndGameClick);
   document.getElementById('btn-spectate').addEventListener('click', () => {
     window.location.href = `spectator.html?game=${gameId}`;

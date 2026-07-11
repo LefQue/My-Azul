@@ -27,10 +27,10 @@ function getOrCreateDeviceId(){
   return id;
 }
 
-async function createGame(maxPlayers){
+async function createGame(maxPlayers, gameMode){
   const joinCode = randomJoinCode();
   const { data: game, error } = await azulSupabase.from('games')
-    .insert({ join_code: joinCode, max_players: maxPlayers })
+    .insert({ join_code: joinCode, max_players: maxPlayers, game_mode: gameMode || 'base' })
     .select().single();
   if (error) throw error;
 
@@ -109,8 +109,13 @@ function fromLegacyPlayerShape(id, player){
   };
 }
 
-async function toggleReady(gameId, playerId, ready, round){
-  const { error: updateError } = await azulSupabase.from('players').update({ ready }).eq('id', playerId);
+// pendingColumnChoices (mode mosaic_free uniquement) : { [row]: col } déjà résolus par CE joueur
+// (voir player.html) — écrits atomiquement avec ready=true pour qu'un autre appareil ne puisse
+// jamais lire ready=true sans les choix qui vont avec.
+async function toggleReady(gameId, playerId, ready, round, pendingColumnChoices){
+  const patch = { ready };
+  if (ready && pendingColumnChoices) patch.pending_column_choices = pendingColumnChoices;
+  const { error: updateError } = await azulSupabase.from('players').update(patch).eq('id', playerId);
   if (updateError) throw updateError;
   if (!ready) return;
   const { data: claimed, error } = await azulSupabase.rpc('try_claim_round_resolution', {
@@ -121,10 +126,13 @@ async function toggleReady(gameId, playerId, ready, round){
 }
 
 async function resolveRoundAndWriteResults(gameId, round){
+  const game = await fetchGameById(gameId);
   const rows = await fetchPlayers(gameId);
   const results = rows.map(row => {
     const player = toLegacyPlayerShape(row);
-    endRoundForPlayer(player, round); // scoring-engine.js, réutilisé tel quel
+    // scoring-engine.js, réutilisé tel quel : dispatche vers le mur fixe (base/mosaic_a/mosaic_b)
+    // ou le mur libre (mosaic_free) selon le mode de la partie
+    endRoundForPlayerByMode(player, round, game.game_mode, row.pending_column_choices || {});
     return fromLegacyPlayerShape(row.id, player);
   });
   const { error } = await azulSupabase.rpc('apply_round_results', {
@@ -138,10 +146,11 @@ async function forceUnclaimStuckRound(gameId, round){
 }
 
 async function endGame(gameId){
+  const game = await fetchGameById(gameId);
   const rows = await fetchPlayers(gameId);
   for (const row of rows){
     const player = toLegacyPlayerShape(row);
-    computeEndGameBonuses(player); // scoring-engine.js, réutilisé tel quel
+    computeEndGameBonusesByMode(player, game.game_mode); // scoring-engine.js, réutilisé tel quel
     await azulSupabase.from('players').update({
       total_score: player.totalScore,
       final_bonuses: player.finalBonuses,

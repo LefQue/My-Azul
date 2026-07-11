@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Azul — Créer une partie</title>
 <link rel="stylesheet" href="shared/style.css">
+<style>
+  .mode-btn{
+    width:100%; text-align:left; padding:10px 12px; border-radius:8px; border:1px solid var(--border);
+    background:var(--card); color:var(--text); text-transform:none; letter-spacing:normal; min-height:auto;
+  }
+  .mode-btn.primary{ background:var(--accent); color:var(--card); border-color:var(--accent); }
+  .mode-btn strong{ font-family:var(--font-display); font-size:.85rem; }
+  .mode-btn span{ display:block; font-size:.75rem; opacity:.8; margin-top:2px; }
+</style>
 </head>
 <body>
 <div id="app">
@@ -12,6 +21,8 @@
   <section id="screen-setup">
     <h1 class="wordmark">Azul<span class="wordmark-sub">Nouvelle partie</span></h1>
     <div class="tile-card">
+      <p>Mode de jeu</p>
+      <div id="game-mode-selector" style="display:flex; flex-direction:column; gap:8px; margin:8px 0 16px;"></div>
       <p>Nombre de joueurs</p>
       <div id="player-count-selector" style="display:flex; gap:8px; margin:8px 0 16px;"></div>
       <button id="btn-create" class="btn primary">Créer la partie</button>
@@ -48,6 +59,13 @@
   "use strict";
 
   let selectedCount = 4;
+  let selectedMode = 'base';
+  const GAME_MODES = [
+    { id: 'base', label: 'Jeu de base', desc: 'Mur fixe, règles standard.' },
+    { id: 'mosaic_free', label: 'Mosaïque éclatante — libre', desc: 'Mur libre : chaque joueur choisit sa colonne en fin de manche (1 couleur par ligne/colonne).' },
+    { id: 'mosaic_a', label: 'Mosaïque éclatante — Face 1 (×2)', desc: 'Mur fixe standard, 5 cases doublent le score de la pose.' },
+    { id: 'mosaic_b', label: 'Mosaïque éclatante — Face 2 (bonus+)', desc: 'Mur fixe standard, bonus de fin de partie augmentés (+3/+10/+12).' },
+  ];
   let currentGame = null;
   let unsubscribe = null;
   let toastTimer = null;
@@ -63,6 +81,18 @@
   function showScreen(id){
     ['screen-setup','screen-lobby'].forEach(s => {
       document.getElementById(s).style.display = (s === id) ? 'block' : 'none';
+    });
+  }
+
+  function renderGameModeSelector(){
+    const el = document.getElementById('game-mode-selector');
+    el.innerHTML = '';
+    GAME_MODES.forEach(m => {
+      const btn = document.createElement('button');
+      btn.className = 'mode-btn' + (m.id === selectedMode ? ' primary' : '');
+      btn.innerHTML = `<strong>${m.label}</strong><span>${m.desc}</span>`;
+      btn.addEventListener('click', () => { selectedMode = m.id; renderGameModeSelector(); });
+      el.appendChild(btn);
     });
   }
 
@@ -110,7 +140,7 @@
 
   async function createGameFlow(){
     try{
-      currentGame = await createGame(selectedCount);
+      currentGame = await createGame(selectedCount, selectedMode);
       document.getElementById('join-code-display').textContent = currentGame.join_code;
       renderQr(currentGame.join_code);
       showScreen('screen-lobby');
@@ -139,6 +169,7 @@
     }
   }
 
+  renderGameModeSelector();
   renderPlayerCountSelector();
   document.getElementById('btn-create').addEventListener('click', createGameFlow);
   document.getElementById('btn-start').addEventListener('click', startGameFlow);
