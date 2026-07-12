@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f2e9d8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141b29" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CjxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjZjJlOWQ4Ii8+CjxyZWN0IHg9IjIiIHk9IjIiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcng9IjEyIiBmaWxsPSJub25lIiBzdHJva2U9IiMxZDRjNzgiIHN0cm9rZS13aWR0aD0iMi41Ii8+CjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWQ0Yzc4IiB0cmFuc2Zvcm09InJvdGF0ZSg0NSAyMyAyMykiLz4KPHJlY3QgeD0iMzQiIHk9IjE2IiB3aWR0aD0iMTQiIGhlaWdodD0iMTQiIGZpbGw9IiNjOTkzMmMiIHRyYW5zZm9ybT0icm90YXRlKDQ1IDQxIDIzKSIvPgo8cmVjdCB4PSIxNiIgeT0iMzQiIHdpZHRoPSIxNCIgaGVpZ2h0PSIxNCIgZmlsbD0iI2I4NTYyZiIgdHJhbnNmb3JtPSJyb3RhdGUoNDUgMjMgNDEpIi8+CjxyZWN0IHg9IjM0IiB5PSIzNCIgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiBmaWxsPSIjMWY4ZjhmIiB0cmFuc2Zvcm09InJvdGF0ZSg0NSA0MSA0MSkiLz4KPC9zdmc+Cg==">
 <title>Azul — Mon plateau</title>
 <link rel="stylesheet" href="shared/style.css">
 <style>
@@ -36,6 +39,7 @@
   #column-choice-cells{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; max-width:260px; margin:12px auto; }
   .col-choice-cell{
     aspect-ratio:1/1; border-radius:6px; border:1px solid var(--border); background:var(--bg);
+    display:flex; align-items:center; justify-content:center;
   }
   .col-choice-cell.valid{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset; }
   .col-choice-cell.valid:active{ transform:scale(.92); }
@@ -55,11 +59,20 @@
 
   <div id="actions">
     <button id="btn-ready" class="btn ready">Je suis prêt pour cette manche</button>
+    <p id="ready-count" style="display:none"></p>
     <button id="btn-spectate" class="btn">Voir tous les joueurs</button>
     <button id="btn-end-game" class="btn accent2">Fin de partie</button>
   </div>
 </div>
 <div id="toast" class="toast"></div>
+
+<div id="round-summary-modal" class="modal">
+  <div class="modal-content tile-card">
+    <h2 id="round-summary-title">Résumé de la manche</h2>
+    <div id="round-summary-body"></div>
+    <button id="btn-close-summary">Fermer</button>
+  </div>
+</div>
 
 <div id="column-choice-modal" class="modal">
   <div class="modal-content tile-card">
@@ -125,9 +138,11 @@
 
   let myRow = null;   // dernière ligne Supabase connue (snake_case)
   let myGame = null;
+  let allPlayers = [];       // tous les joueurs de la partie (pour le compteur « Prêts x/y »)
   let toastTimer = null;
   let unsubscribe = null;
   let pendingWrites = 0; // écritures locales en vol — les échos realtime reçus pendant sont périmés
+  let summaryShownForRound = null; // dernière manche dont le résumé a été affiché (null = pas encore initialisé)
 
   function showToast(msg){
     const el = document.getElementById('toast');
@@ -170,6 +185,7 @@
     try{
       const [game, players] = await Promise.all([fetchGameById(gameId), fetchPlayers(gameId)]);
       myGame = game;
+      allPlayers = players;
       const mine = players.find(p => p.id === playerId);
       if (mine) myRow = mine;
       applyGameState();
@@ -181,6 +197,56 @@
     if (myGame.phase === 'ended'){ window.location.href = `spectator.html?game=${gameId}`; return; }
     checkResolvingWatchdog();
     renderBoard();
+    maybeShowRoundSummary();
+  }
+
+  // Affiche le résumé de MA manche dès que la résolution est passée (l'écho games et l'écho
+  // players peuvent arriver dans n'importe quel ordre : on retente à chaque événement jusqu'à ce
+  // que l'entrée d'historique de la manche précédente soit visible dans myRow).
+  function maybeShowRoundSummary(){
+    if (!myRow || !myGame || summaryShownForRound === null) return;
+    const prevRound = myGame.current_round - 1;
+    if (prevRound <= summaryShownForRound) return;
+    const entry = (myRow.round_history || []).find(h => h.round === prevRound);
+    if (!entry) return;
+    summaryShownForRound = prevRound;
+    showRoundSummaryModal(entry);
+  }
+
+  function showRoundSummaryModal(s){
+    const sign = s.roundDelta >= 0 ? '+' : '';
+    const lines = (s.completedLines || []).map(l =>
+      `<li>Ligne ${l.row+1} (${COLOR_MAP[l.color].label}) : +${l.points}</li>`
+    ).join('') + (s.discardedLines || []).map(l =>
+      `<li style="color:var(--accent-2)">Ligne ${l.row+1} (${COLOR_MAP[l.color].label}) : défaussée — couleur déjà posée sur le mur</li>`
+    ).join('');
+    document.getElementById('round-summary-title').textContent = `Résumé de la manche ${s.round}`;
+    document.getElementById('round-summary-body').innerHTML = `
+      ${lines ? `<ul style="margin:4px 0; padding-left:20px; color:var(--text);">${lines}</ul>` : '<p style="margin:4px 0;color:var(--muted)">Aucune ligne complétée</p>'}
+      <p style="margin:8px 0 0; color:var(--text);">mur +${s.wallScore}, plancher ${s.floorPenalty} → ${sign}${s.roundDelta} (total ${s.runningTotal})</p>`;
+    document.getElementById('round-summary-modal').style.display = 'flex';
+  }
+
+  // historique de MES manches, ouvert en touchant le badge de manche
+  function showHistory(){
+    const hist = myRow && myRow.round_history || [];
+    if (!hist.length){ showToast('Aucune manche terminée pour le moment.'); return; }
+    document.getElementById('round-summary-title').textContent = 'Historique de mes manches';
+    document.getElementById('round-summary-body').innerHTML = hist.map(s =>
+      `<div style="margin-bottom:8px; color:var(--text);"><strong>Manche ${s.round}</strong> : mur +${s.wallScore}, plancher ${s.floorPenalty} → ${s.roundDelta>=0?'+':''}${s.roundDelta} (total ${s.runningTotal})</div>`
+    ).join('');
+    document.getElementById('round-summary-modal').style.display = 'flex';
+  }
+
+  function renderReadyCount(){
+    const el = document.getElementById('ready-count');
+    if (!myGame || myGame.phase === 'lobby' || !allPlayers.length){ el.style.display = 'none'; return; }
+    const claimed = allPlayers.filter(p => p.claimed_by_device_id);
+    const ready = claimed.filter(p => p.id === playerId ? myRow.ready : p.ready).length;
+    el.style.display = '';
+    el.textContent = myGame.phase === 'resolving'
+      ? 'Résolution de la manche…'
+      : `Prêts : ${ready}/${claimed.length}`;
   }
 
   // Filet de sécurité : si le client qui a gagné la résolution de manche disparaît entre le claim
@@ -222,6 +288,29 @@
   function addFloorTile(row){
     const offset = row.has_first_player_marker ? 1 : 0;
     return Math.min(row.floor_filled + 1, FLOOR_PENALTIES.length - offset);
+  }
+
+  // simule la fin de manche sur un clone pour afficher les points en préparation. En Mosaïque
+  // libre le vrai choix de colonne n'a pas encore eu lieu : on prend la première colonne valide
+  // de chaque ligne ambiguë, d'où le « ≈ » affiché dans ce mode.
+  function previewRound(){
+    try{
+      const clone = JSON.parse(JSON.stringify(toLegacyPlayerShape(myRow)));
+      if (myGame.game_mode === 'mosaic_free'){
+        const choices = {};
+        const wall = clone.wall.map(r => r.slice());
+        clone.patternLines.forEach((line, row) => {
+          if (line.count === line.capacity && line.color !== null){
+            const cols = freeWallValidColumns(wall, row, line.color);
+            if (cols.length){ choices[row] = cols[0]; wall[row][cols[0]] = line.color; }
+          }
+        });
+        endRoundForPlayerFreeWall(clone, 0, choices);
+      } else {
+        endRoundForPlayerFixedWall(clone, 0, myGame.game_mode);
+      }
+      return clone.roundHistory[clone.roundHistory.length - 1];
+    }catch(e){ return null; }
   }
 
   async function tapColor(rowIndex, colorId){
@@ -296,14 +385,14 @@
       const slots = Array.from({length:line.capacity}, (_, i) => {
         // les cases se remplissent côté mur (bord droit) : les indices les plus hauts en premier
         const filled = i >= line.capacity - line.count;
-        return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}"></div>`;
+        return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}">${filled ? `<span class="tile-sym">${COLOR_MAP[line.color].symbol}</span>` : ''}</div>`;
       }).join('');
       const isFreeMode = myGame.game_mode === 'mosaic_free';
       const swatches = COLORS.map(c => {
         const disabledHint = isFreeMode
           ? freeWallValidColumns(myRow.wall, row, c.id).length === 0
           : myRow.wall[row][wallColumnFor(row, c.id)] !== null;
-        return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}" ${locked?'disabled':''}></button>`;
+        return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}" ${locked?'disabled':''}><span class="tile-sym">${c.symbol}</span></button>`;
       }).join('');
       return `<div class="pattern-row">
         <div class="pl-slots" data-row="${row}">${slots}</div>
@@ -313,17 +402,23 @@
 
     const wallHtml = `<div class="wall-grid">` + myRow.wall.map((rowArr, r) =>
       rowArr.map((cell, c) => {
-        let style;
+        let style, sym = '';
         if (myGame.game_mode === 'mosaic_free'){
           style = cell !== null ? `background:${tileGloss(COLOR_MAP[cell].hex)}` : '';
+          if (cell !== null) sym = `<span class="tile-sym">${COLOR_MAP[cell].symbol}</span>`;
         } else {
           const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
           style = cell !== null
             ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
             : `background:${hexToRgba(patternHex,0.16)}; border:1px dashed ${hexToRgba(patternHex,0.45)};`;
+          // case vide : symbole en filigrane de la couleur attendue (repère daltonien du motif du mur)
+          sym = cell !== null
+            ? `<span class="tile-sym">${COLOR_MAP[cell].symbol}</span>`
+            : `<span class="tile-sym" style="color:${hexToRgba(patternHex,0.7)}; text-shadow:none;">${COLOR_MAP[WALL_PATTERN[r][c]].symbol}</span>`;
         }
         const badge = mosaicMultiplierFor(myGame.game_mode, r, c) === 2 ? `<span class="wall-x2-badge">×2</span>` : '';
-        return `<div class="wall-cell" style="${style}">${badge}</div>`;
+        if (badge) sym = ''; // le badge ×2 recouvre la case, le symbole y serait illisible
+        return `<div class="wall-cell" style="${style}">${sym}${badge}</div>`;
       }).join('')
     ).join('') + `</div>`;
 
@@ -337,6 +432,12 @@
     }).join('') + `</div>
       <label class="marker-toggle"><input type="checkbox" id="marker-checkbox" ${myRow.has_first_player_marker?'checked':''} ${locked?'disabled':''}/> Jeton premier joueur (occupe la 1ère case du plancher)</label>`;
 
+    // aperçu en direct de la manche en préparation (simulation sur un clone, rien n'est modifié)
+    const preview = previewRound();
+    const previewHtml = preview && (preview.wallScore !== 0 || preview.floorPenalty !== 0)
+      ? `<p class="round-preview">${myGame.game_mode === 'mosaic_free' ? '≈ ' : ''}Cette manche : mur +${preview.wallScore} · plancher ${preview.floorPenalty} → ${preview.roundDelta >= 0 ? '+' : ''}${preview.roundDelta}</p>`
+      : '';
+
     document.getElementById('board').innerHTML = `
       ${locked ? `<p class="lock-note">🔒 Plateau verrouillé ${myRow.ready ? 'tant que tu es « Prêt »' : 'pendant la résolution de la manche'}.</p>` : ''}
       <div class="section-header">
@@ -349,6 +450,7 @@
       <h2>Ligne de plancher</h2>
       ${floorHtml}
       <p class="score-line">Score total : <strong>${myRow.total_score}</strong></p>
+      ${previewHtml}
     `;
 
     document.querySelectorAll('.swatch').forEach(btn => {
@@ -373,6 +475,7 @@
       btnReady.textContent = myRow.ready ? 'Prêt ✓ (retirer)' : 'Je suis prêt pour cette manche';
       btnReady.classList.toggle('is-ready', myRow.ready);
     }
+    renderReadyCount();
   }
 
   // Mosaïque libre : si la manche a des lignes de motifs complètes avec plusieurs colonnes encore
@@ -392,7 +495,8 @@
         const valid = validCols.includes(c);
         const occupied = workingWall[row][c];
         const style = occupied ? `background:${tileGloss(COLOR_MAP[occupied].hex)}` : '';
-        return `<button class="col-choice-cell ${valid?'valid':'invalid'}" data-col="${c}" style="${style}" ${valid?'':'disabled'}></button>`;
+        const sym = occupied ? `<span class="tile-sym">${COLOR_MAP[occupied].symbol}</span>` : '';
+        return `<button class="col-choice-cell ${valid?'valid':'invalid'}" data-col="${c}" style="${style}" ${valid?'':'disabled'}>${sym}</button>`;
       }).join('');
       cellsEl.querySelectorAll('.col-choice-cell.valid').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -418,6 +522,8 @@
       }
       if (myRow.ready){
         await toggleReady(gameId, playerId, false, myGame.current_round);
+        myRow.ready = false; // mise à jour optimiste, l'écho realtime confirmera
+        renderBoard();
         return;
       }
       let pendingColumnChoices = undefined;
@@ -426,6 +532,8 @@
         pendingColumnChoices = await collectFreeWallColumnChoices(player, showColumnChoiceModal);
       }
       await toggleReady(gameId, playerId, true, myGame.current_round, pendingColumnChoices);
+      myRow.ready = true; // mise à jour optimiste, l'écho realtime confirmera
+      renderBoard();
     }catch(e){
       if (e.message === 'cancelled') return;
       showToast('Erreur : ' + (e.message || e));
@@ -637,10 +745,10 @@
       const capacity = r + 1;
       const slots = Array.from({length:capacity}, (_, i) => {
         const filled = i >= capacity - row.count;
-        return `<div class="scr-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[row.color].hex)}` : ''}"></div>`;
+        return `<div class="scr-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[row.color].hex)}` : ''}">${filled ? `<span class="tile-sym">${COLOR_MAP[row.color].symbol}</span>` : ''}</div>`;
       }).join('');
       const palette = COLORS.map(c =>
-        `<button style="background:${tileGloss(c.hex)}" data-row="${r}" data-color="${c.id}" title="${c.label}"></button>`
+        `<button style="background:${tileGloss(c.hex)}" data-row="${r}" data-color="${c.id}" title="${c.label}"><span class="tile-sym">${c.symbol}</span></button>`
       ).join('');
       return `<div class="scan-confirm-row ${row.anomaly?'anomaly':''}" data-row="${r}">
         <div class="scr-slots">${slots}</div>
@@ -712,12 +820,14 @@
 
   async function init(){
     myGame = await fetchGameById(gameId);
-    const players = await fetchPlayers(gameId);
-    myRow = players.find(p => p.id === playerId);
+    allPlayers = await fetchPlayers(gameId);
+    myRow = allPlayers.find(p => p.id === playerId);
     if (!myRow){
       document.body.innerHTML = '<p style="padding:20px;">Joueur introuvable dans cette partie.</p>';
       return;
     }
+    // ne pas rejouer les résumés des manches déjà passées au chargement de la page
+    summaryShownForRound = myGame.current_round - 1;
     applyGameState(); // gère aussi une partie déjà terminée (redirection vers le spectateur)
 
     unsubscribe = subscribeToGame(gameId, {
@@ -726,10 +836,17 @@
         applyGameState();
       },
       onPlayerChange: (eventType, p) => {
-        if (p.id !== playerId) return;
-        if (pendingWrites > 0) return; // écho périmé : une écriture locale plus récente est en vol
-        myRow = p;
-        renderBoard();
+        const idx = allPlayers.findIndex(pl => pl.id === p.id);
+        if (idx >= 0) allPlayers[idx] = p; else allPlayers.push(p);
+        if (p.id === playerId){
+          if (pendingWrites === 0){ // sinon écho périmé : une écriture locale plus récente est en vol
+            myRow = p;
+            renderBoard();
+          }
+          maybeShowRoundSummary();
+        } else {
+          renderReadyCount();
+        }
       },
     });
 
@@ -740,6 +857,13 @@
   }
 
   document.getElementById('btn-ready').addEventListener('click', onReadyClick);
+  document.getElementById('btn-close-summary').addEventListener('click', () => {
+    document.getElementById('round-summary-modal').style.display = 'none';
+  });
+  const roundBadge = document.getElementById('round-badge');
+  roundBadge.style.cursor = 'pointer';
+  roundBadge.title = 'Toucher pour voir l\'historique des manches';
+  roundBadge.addEventListener('click', showHistory);
   document.getElementById('btn-column-choice-cancel').addEventListener('click', () => {
     if (cancelColumnChoice) cancelColumnChoice();
   });

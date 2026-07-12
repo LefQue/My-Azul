@@ -144,11 +144,18 @@
   .pl-slots{ display:flex; gap:4px; padding:4px; border-radius:6px; width:164px; justify-content:flex-end; }
   .pl-slot{
     width:28px; height:28px; border-radius:5px; border:1px solid var(--border); background:var(--bg);
+    display:flex; align-items:center; justify-content:center;
   }
   .pl-palette{ display:flex; gap:6px; }
   .swatch{
     width:28px; height:28px; min-width:28px; border-radius:50%; border:2px solid rgba(255,255,255,.5);
     padding:0; box-shadow:0 1px 3px var(--shadow-sink); transition:transform .1s ease;
+    display:flex; align-items:center; justify-content:center;
+  }
+  /* glyphe daltonien porté par chaque tuile (voir COLORS.symbol) */
+  .tile-sym{
+    pointer-events:none; font-size:.6rem; line-height:1;
+    color:rgba(255,255,255,.92); text-shadow:0 1px 2px rgba(0,0,0,.55);
   }
   .swatch:active{ transform:scale(.88); }
   .swatch.disabled-hint{ opacity:.28; }
@@ -157,6 +164,7 @@
   .wall-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:5px; max-width:230px; margin:6px auto 0; }
   .wall-cell{
     aspect-ratio:1/1; border-radius:4px; border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
   }
 
   /* --- floor line --- */
@@ -179,6 +187,7 @@
     text-align:center; font-size:1.2rem; margin-top:20px; font-family:var(--font-display); color:var(--accent);
   }
   .score-line strong{ font-size:1.6rem; }
+  .round-preview{ text-align:center; font-size:.78rem; color:var(--muted); margin:2px 0 0; }
 
   /* --- actions --- */
   #actions{
@@ -232,6 +241,14 @@
     margin-top:8px; font-family:var(--font-display); letter-spacing:.08em; text-transform:uppercase;
   }
 
+  /* --- confettis azulejo (écran des résultats) --- */
+  #confetti{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:300; }
+  .confetto{ position:absolute; top:-20px; animation:confetti-fall linear forwards; }
+  @keyframes confetti-fall{
+    from{ transform:translateY(-4vh) rotate(0deg); opacity:1; }
+    to{ transform:translateY(108vh) rotate(720deg); opacity:.7; }
+  }
+
   @media (prefers-reduced-motion: reduce){
     *{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
   }
@@ -282,7 +299,7 @@
 
 <div id="round-summary-modal" class="modal">
   <div class="modal-content tile-card">
-    <h2>Résumé de la manche</h2>
+    <h2 id="round-summary-title">Résumé de la manche</h2>
     <div id="round-summary-body"></div>
     <button id="btn-close-summary">Fermer</button>
   </div>
@@ -292,12 +309,14 @@
 (function(){
   "use strict";
 
+  // `symbol` : glyphe distinctif affiché sur chaque tuile (comme les motifs du jeu physique) pour
+  // que les 5 couleurs restent différenciables sans percevoir la couleur (daltonisme)
   const COLORS = [
-    { id:'B', label:'Bleu',      hex:'#2563eb' },
-    { id:'Y', label:'Jaune',     hex:'#eab308' },
-    { id:'R', label:'Rouge',     hex:'#dc2626' },
-    { id:'K', label:'Noir',      hex:'#27272a' },
-    { id:'W', label:'Turquoise', hex:'#06b6d4' },
+    { id:'B', label:'Bleu',      hex:'#2563eb', symbol:'✿' },
+    { id:'Y', label:'Jaune',     hex:'#eab308', symbol:'★' },
+    { id:'R', label:'Rouge',     hex:'#dc2626', symbol:'▲' },
+    { id:'K', label:'Noir',      hex:'#27272a', symbol:'●' },
+    { id:'W', label:'Turquoise', hex:'#06b6d4', symbol:'◆' },
   ];
   const COLOR_MAP = Object.fromEntries(COLORS.map(c => [c.id, c]));
 
@@ -488,8 +507,27 @@
   }
 
   function renderRoundBadge(){
-    document.getElementById('round-badge').innerHTML =
-      `<span class="rb-num">${gameState.currentRound}</span><span class="rb-label">Manche</span>`;
+    const el = document.getElementById('round-badge');
+    el.innerHTML = `<span class="rb-num">${gameState.currentRound}</span><span class="rb-label">Manche</span>`;
+    el.style.cursor = 'pointer';
+    el.title = 'Toucher pour voir l\'historique des manches';
+    el.onclick = showHistory;
+  }
+
+  // historique complet des manches, ouvert en touchant le badge de manche
+  function showHistory(){
+    const anyHistory = gameState.players.some(p => p.roundHistory.length);
+    if (!anyHistory){ showToast('Aucune manche terminée pour le moment.'); return; }
+    document.getElementById('round-summary-title').textContent = 'Historique des manches';
+    document.getElementById('round-summary-body').innerHTML = gameState.players.map(p => {
+      const rows = p.roundHistory.map(s =>
+        `<li>Manche ${s.round} : mur +${s.wallScore}, plancher ${s.floorPenalty} → ${s.roundDelta>=0?'+':''}${s.roundDelta} (total ${s.runningTotal})</li>`
+      ).join('');
+      return `<div style="color:var(--text); margin-bottom:12px;"><strong>${escapeHtml(p.name)}</strong>
+        ${rows ? `<ul style="margin:4px 0; padding-left:20px;">${rows}</ul>` : '<p style="margin:4px 0;color:var(--muted)">—</p>'}
+      </div>`;
+    }).join('');
+    document.getElementById('round-summary-modal').style.display = 'flex';
   }
 
   function renderBoard(){
@@ -500,12 +538,12 @@
       const slots = Array.from({length:line.capacity}, (_, i) => {
         // remplissage côté mur (bord droit), comme sur le plateau physique
         const filled = i >= line.capacity - line.count;
-        return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}"></div>`;
+        return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}">${filled ? `<span class="tile-sym">${COLOR_MAP[line.color].symbol}</span>` : ''}</div>`;
       }).join('');
       const swatches = COLORS.map(c => {
         const col = wallColumnFor(row, c.id);
         const disabledHint = player.wall[row][col] !== null;
-        return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}"></button>`;
+        return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}"><span class="tile-sym">${c.symbol}</span></button>`;
       }).join('');
       return `<div class="pattern-row">
         <div class="pl-slots" data-row="${row}">${slots}</div>
@@ -519,7 +557,11 @@
         const style = cell !== null
           ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
           : `background:${hexToRgba(patternHex,0.16)}; border:1px dashed ${hexToRgba(patternHex,0.45)};`;
-        return `<div class="wall-cell" style="${style}"></div>`;
+        // case vide : symbole en filigrane de la couleur attendue (repère daltonien du motif du mur)
+        const sym = cell !== null
+          ? `<span class="tile-sym">${COLOR_MAP[cell].symbol}</span>`
+          : `<span class="tile-sym" style="color:${hexToRgba(patternHex,0.7)}; text-shadow:none;">${COLOR_MAP[WALL_PATTERN[r][c]].symbol}</span>`;
+        return `<div class="wall-cell" style="${style}">${sym}</div>`;
       }).join('')
     ).join('') + `</div>`;
 
@@ -533,6 +575,12 @@
     }).join('') + `</div>
       <label class="marker-toggle"><input type="checkbox" id="marker-checkbox" ${player.hasFirstPlayerMarker?'checked':''}/> Jeton premier joueur (occupe la 1ère case du plancher)</label>`;
 
+    // aperçu en direct de la manche en préparation (simulation sur un clone, rien n'est modifié)
+    const preview = previewRound(player);
+    const previewHtml = preview && (preview.wallScore !== 0 || preview.floorPenalty !== 0)
+      ? `<p class="round-preview">Cette manche : mur +${preview.wallScore} · plancher ${preview.floorPenalty} → ${preview.roundDelta >= 0 ? '+' : ''}${preview.roundDelta}</p>`
+      : '';
+
     container.innerHTML = `
       <h2>Lignes de motifs</h2>
       ${patternHtml}
@@ -541,6 +589,7 @@
       <h2>Ligne de plancher</h2>
       ${floorHtml}
       <p class="score-line">Score total : <strong>${player.totalScore}</strong></p>
+      ${previewHtml}
     `;
 
     container.querySelectorAll('.swatch').forEach(btn => {
@@ -565,6 +614,15 @@
   function addFloorTile(player){
     const offset = player.hasFirstPlayerMarker ? 1 : 0;
     player.floorFilled = Math.min(player.floorFilled + 1, FLOOR_PENALTIES.length - offset);
+  }
+
+  // simule la fin de manche sur un clone pour afficher les points en préparation
+  function previewRound(player){
+    try{
+      const clone = JSON.parse(JSON.stringify(player));
+      endRoundForPlayer(clone, 0);
+      return clone.roundHistory[clone.roundHistory.length - 1];
+    }catch(e){ return null; }
   }
 
   function tapColor(rowIndex, colorId){
@@ -626,6 +684,7 @@
   }
 
   function showRoundSummary(summaries){
+    document.getElementById('round-summary-title').textContent = 'Résumé de la manche';
     const body = document.getElementById('round-summary-body');
     body.innerHTML = gameState.players.map((p,i) => {
       const s = summaries[i];
@@ -642,6 +701,30 @@
       </div>`;
     }).join('');
     document.getElementById('round-summary-modal').style.display = 'flex';
+  }
+
+  // petite pluie d'azulejos pour couronner les résultats
+  function launchConfetti(){
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (document.getElementById('confetti')) return;
+    const colors = COLORS.map(c => c.hex).concat('#c9932c');
+    const wrap = document.createElement('div');
+    wrap.id = 'confetti';
+    for (let i = 0; i < 70; i++){
+      const c = document.createElement('div');
+      c.className = 'confetto';
+      const size = 6 + Math.random()*8;
+      c.style.left = Math.random()*100 + 'vw';
+      c.style.width = size + 'px';
+      c.style.height = size + 'px';
+      c.style.background = colors[i % colors.length];
+      c.style.animationDuration = (2.4 + Math.random()*2.4) + 's';
+      c.style.animationDelay = (Math.random()*0.9) + 's';
+      c.style.borderRadius = Math.random() < 0.3 ? '50%' : '2px';
+      wrap.appendChild(c);
+    }
+    document.body.appendChild(wrap);
+    setTimeout(() => wrap.remove(), 6500);
   }
 
   // ---------- results screen ----------
@@ -736,6 +819,7 @@
       saveState();
       renderResults();
       showScreen('screen-results');
+      launchConfetti();
     });
 
     document.getElementById('btn-new-game').addEventListener('click', () => {

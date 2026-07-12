@@ -104,17 +104,29 @@ input[type=text]{
 /* largeur fixe (5 cases + 4 espaces) + alignement à droite : reproduit le plateau physique,
    où les lignes de motifs sont justifiées côté mur (triangle pointe en haut à droite) */
 .pl-slots{ display:flex; gap:4px; padding:4px; border-radius:6px; width:146px; justify-content:flex-end; }
-.pl-slot{ width:26px; height:26px; border-radius:5px; border:1px solid var(--border); background:var(--bg); }
+.pl-slot{
+  width:26px; height:26px; border-radius:5px; border:1px solid var(--border); background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+}
 .pl-palette{ display:flex; gap:6px; }
 .swatch{
   width:26px; height:26px; min-width:26px; border-radius:50%; border:2px solid rgba(255,255,255,.5);
   padding:0; box-shadow:0 1px 3px var(--shadow-sink); transition:transform .1s ease;
+  display:flex; align-items:center; justify-content:center;
 }
 .swatch:active{ transform:scale(.88); }
 .swatch.disabled-hint{ opacity:.28; }
+/* glyphe daltonien porté par chaque tuile (voir COLORS.symbol dans scoring-engine.js) */
+.tile-sym{
+  pointer-events:none; font-size:.58rem; line-height:1;
+  color:rgba(255,255,255,.92); text-shadow:0 1px 2px rgba(0,0,0,.55);
+}
 
 .wall-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:5px; max-width:210px; margin:6px auto 0; }
-.wall-cell{ position:relative; aspect-ratio:1/1; border-radius:4px; border:1px solid var(--border); }
+.wall-cell{
+  position:relative; aspect-ratio:1/1; border-radius:4px; border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+}
 .wall-grid.mini{ max-width:110px; gap:3px; }
 .wall-x2-badge{
   position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
@@ -135,6 +147,16 @@ input[type=text]{
 
 .score-line{ text-align:center; font-size:1.1rem; margin-top:16px; font-family:var(--font-display); color:var(--accent); }
 .score-line strong{ font-size:1.5rem; }
+.round-preview{ text-align:center; font-size:.78rem; color:var(--muted); margin:2px 0 0; }
+#ready-count{ text-align:center; font-size:.78rem; color:var(--muted); margin:0; }
+
+/* --- confettis azulejo (fin de partie) --- */
+#confetti{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:400; }
+.confetto{ position:absolute; top:-20px; animation:confetti-fall linear forwards; }
+@keyframes confetti-fall{
+  from{ transform:translateY(-4vh) rotate(0deg); opacity:1; }
+  to{ transform:translateY(108vh) rotate(720deg); opacity:.7; }
+}
 
 /* --- spectator grid of player cards --- */
 .spectator-grid{ display:flex; flex-direction:column; gap:14px; }
@@ -195,11 +217,15 @@ input[type=text]{
 }
 .scan-confirm-row.anomaly{ background:rgba(184,86,47,.12); border-radius:8px; padding:8px; }
 .scan-confirm-row .scr-slots{ display:flex; gap:4px; width:136px; justify-content:flex-end; }
-.scan-confirm-row .scr-slot{ width:24px; height:24px; border-radius:5px; border:1px solid var(--border); background:var(--bg); }
+.scan-confirm-row .scr-slot{
+  width:24px; height:24px; border-radius:5px; border:1px solid var(--border); background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+}
 .scan-confirm-row .scr-palette{ display:flex; gap:4px; }
 .scan-confirm-row .scr-palette button{
   width:24px; height:24px; min-width:24px; border-radius:50%; border:2px solid rgba(255,255,255,.5);
   box-shadow:0 1px 3px var(--shadow-sink);
+  display:flex; align-items:center; justify-content:center; padding:0;
 }
 .scr-count{ display:flex; align-items:center; gap:6px; font-family:var(--font-display); color:var(--accent); }
 .scr-count button{

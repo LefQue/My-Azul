@@ -3,12 +3,14 @@
 // (même si physiquement dupliqué entre les forks single-device et ce fichier multijoueur).
 // Chargé via <script src="shared/scoring-engine.js"></script>, expose les mêmes noms en scope global.
 
+// `symbol` : glyphe distinctif affiché sur chaque tuile (comme les motifs du jeu physique) pour
+// que les 5 couleurs restent différenciables sans percevoir la couleur (daltonisme)
 const COLORS = [
-  { id:'B', label:'Bleu',      hex:'#2563eb' },
-  { id:'Y', label:'Jaune',     hex:'#eab308' },
-  { id:'R', label:'Rouge',     hex:'#dc2626' },
-  { id:'K', label:'Noir',      hex:'#27272a' },
-  { id:'W', label:'Turquoise', hex:'#06b6d4' },
+  { id:'B', label:'Bleu',      hex:'#2563eb', symbol:'✿' },
+  { id:'Y', label:'Jaune',     hex:'#eab308', symbol:'★' },
+  { id:'R', label:'Rouge',     hex:'#dc2626', symbol:'▲' },
+  { id:'K', label:'Noir',      hex:'#27272a', symbol:'●' },
+  { id:'W', label:'Turquoise', hex:'#06b6d4', symbol:'◆' },
 ];
 const COLOR_MAP = Object.fromEntries(COLORS.map(c => [c.id, c]));
 
