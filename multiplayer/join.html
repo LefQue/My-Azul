@@ -8,6 +8,7 @@
 </head>
 <body>
 <div id="app">
+  <a class="home-link" href="../home.html">← Accueil</a>
   <h1 class="wordmark">Azul<span class="wordmark-sub">Rejoindre</span></h1>
 
   <section id="screen-enter-code">
@@ -95,6 +96,9 @@
         goToPlayer(game.id, mine.id);
         return;
       }
+      // les codes ne sont jamais recyclés : un vieux code retombe sur une partie finie —
+      // inutile de proposer un siège dedans
+      if (game.phase === 'ended'){ showToast('Cette partie est déjà terminée.'); return; }
 
       document.getElementById('screen-enter-code').style.display = 'none';
       document.getElementById('screen-pick-seat').style.display = 'block';

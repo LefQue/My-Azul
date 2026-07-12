@@ -85,10 +85,23 @@ $$;
 
 -- Persiste les résultats déjà calculés côté client (endRoundForPlayer en JS) et avance la manche.
 -- Volontairement sans aucune règle de score ici : juste "écrire ces lignes, avancer le round".
+-- L'avancement de manche est fait EN PREMIER et sert de garde : si un client résolveur lent arrive
+-- après qu'un autre a déjà appliqué cette manche (cas du watchdog force_unclaim_stuck_round), la
+-- condition ne matche plus et on ne réécrit pas les joueurs une deuxième fois (le tout dans la même
+-- transaction plpgsql, donc pas de risque d'avancer la manche sans écrire les joueurs).
 
 create or replace function apply_round_results(p_game_id uuid, p_round int, p_results jsonb)
 returns void language plpgsql as $$
+declare
+  v_ok boolean;
 begin
+  update games set phase = 'playing', current_round = p_round + 1, resolving_since = null
+  where id = p_game_id and phase = 'resolving' and current_round = p_round
+  returning true into v_ok;
+  if not coalesce(v_ok, false) then
+    return;
+  end if;
+
   update players p set
     wall                    = r.wall,
     pattern_lines           = r.pattern_lines,
@@ -102,9 +115,6 @@ begin
   from jsonb_to_recordset(p_results)
     as r(id uuid, wall jsonb, pattern_lines jsonb, floor_filled int, total_score int, round_history_entry jsonb)
   where p.id = r.id and p.game_id = p_game_id;
-
-  update games set phase = 'playing', current_round = p_round + 1, resolving_since = null
-  where id = p_game_id and phase = 'resolving';
 end;
 $$;
 

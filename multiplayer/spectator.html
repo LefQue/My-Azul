@@ -22,6 +22,7 @@
 </head>
 <body>
 <div id="app">
+  <a class="home-link" href="../home.html">← Accueil</a>
   <h1 class="wordmark">Azul<span class="wordmark-sub">Tableau des scores</span></h1>
   <div id="round-badge"><span class="rb-num" id="round-num">–</span><span class="rb-label">Manche</span></div>
   <div id="players-grid" class="spectator-grid"></div>
@@ -75,12 +76,16 @@
   function render(){
     document.getElementById('round-num').textContent = game ? game.current_round : '–';
 
-    const sorted = [...players].sort((a,b) => b.total_score - a.total_score);
-    const maxScore = sorted.length ? sorted[0].total_score : 0;
     const isEnded = game && game.phase === 'ended';
+    const rowsOf = p => (p.final_bonuses && p.final_bonuses.rows) || 0;
+    // pendant la partie : ordre des sièges (stable, les cartes ne sautent pas à chaque point) ;
+    // à la fin : classement par score, départagé par lignes complètes (règle officielle)
+    const sorted = [...players].sort((a,b) => isEnded
+      ? (b.total_score - a.total_score || rowsOf(b) - rowsOf(a))
+      : (a.slot_index - b.slot_index));
 
     document.getElementById('players-grid').innerHTML = sorted.map(p => {
-      const isWinner = isEnded && p.total_score === maxScore;
+      const isWinner = isEnded && p.total_score === sorted[0].total_score && rowsOf(p) === rowsOf(sorted[0]);
       const bonuses = p.final_bonuses;
       return `<div class="tile-card player-card">
         ${renderMiniWall(p.wall)}

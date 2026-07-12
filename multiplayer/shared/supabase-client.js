@@ -118,11 +118,19 @@ async function toggleReady(gameId, playerId, ready, round, pendingColumnChoices)
   const { error: updateError } = await azulSupabase.from('players').update(patch).eq('id', playerId);
   if (updateError) throw updateError;
   if (!ready) return;
+  await attemptRoundResolution(gameId, round);
+}
+
+// Tente de gagner la résolution de la manche et, si gagnée, la résout. Appelé par le dernier
+// joueur qui passe "Prêt" (toggleReady) mais aussi par le watchdog de player.html quand une
+// partie reste bloquée en 'resolving' (client résolveur qui a crashé/fermé son onglet).
+async function attemptRoundResolution(gameId, round){
   const { data: claimed, error } = await azulSupabase.rpc('try_claim_round_resolution', {
     p_game_id: gameId, p_round: round,
   });
   if (error) throw error;
   if (claimed) await resolveRoundAndWriteResults(gameId, round);
+  return claimed;
 }
 
 async function resolveRoundAndWriteResults(gameId, round){
@@ -146,7 +154,18 @@ async function forceUnclaimStuckRound(gameId, round){
 }
 
 async function endGame(gameId){
-  const game = await fetchGameById(gameId);
+  // Garde atomique : l'update conditionnel sur la phase ne matche qu'une seule fois, donc un seul
+  // client calcule et écrit les bonus. Sans elle, un double-tap ou deux joueurs cliquant "Fin de
+  // partie" quasi simultanément additionnaient les bonus deux fois dans total_score.
+  const { data: claimed, error: claimError } = await azulSupabase.from('games')
+    .update({ phase: 'ended' })
+    .eq('id', gameId)
+    .in('phase', ['lobby', 'playing'])
+    .select();
+  if (claimError) throw claimError;
+  if (!claimed || !claimed.length) return false; // déjà terminée (ou résolution de manche en cours)
+
+  const game = claimed[0];
   const rows = await fetchPlayers(gameId);
   for (const row of rows){
     const player = toLegacyPlayerShape(row);
@@ -156,5 +175,5 @@ async function endGame(gameId){
       final_bonuses: player.finalBonuses,
     }).eq('id', row.id);
   }
-  await azulSupabase.from('games').update({ phase: 'ended' }).eq('id', gameId);
+  return true;
 }

@@ -19,6 +19,7 @@
 <div id="app">
 
   <section id="screen-setup">
+    <a class="home-link" href="../home.html">← Accueil</a>
     <h1 class="wordmark">Azul<span class="wordmark-sub">Nouvelle partie</span></h1>
     <div class="tile-card">
       <p>Mode de jeu</p>
@@ -160,6 +161,11 @@
 
   async function startGameFlow(){
     try{
+      // Remet tous les "Prêt" à zéro AVANT de démarrer : des joueurs déjà sur leur plateau ont pu
+      // passer prêt pendant le salon (phase lobby, où la résolution de manche ne peut pas se
+      // déclencher) — sans ce reset, la 1ère manche restait bloquée jusqu'à ce que quelqu'un
+      // re-toggle son bouton, puisque plus aucun toggle ne survenait après le démarrage.
+      await azulSupabase.from('players').update({ ready: false }).eq('game_id', currentGame.id);
       await azulSupabase.from('games').update({ phase: 'playing' }).eq('id', currentGame.id);
       showToast('Partie démarrée !');
       window.location.href = `spectator.html?game=${currentGame.id}`;

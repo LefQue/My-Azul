@@ -15,6 +15,12 @@
   #round-badge .rb-label{ font-size:.5rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
   #actions{ display:flex; flex-direction:column; gap:8px; margin-top:16px; }
 
+  /* --- plateau verrouillé (Prêt / résolution en cours) --- */
+  #board.locked .swatch, #board.locked .pl-slot, #board.locked .floor-slot, #board.locked #btn-scan-lines{ opacity:.45; }
+  .lock-note{ font-size:.75rem; color:var(--muted); text-align:center; margin:0 0 8px; }
+  .floor-slot.marker{ background:var(--gold); border-color:var(--gold); color:#3a2b0d; font-size:.6rem; font-weight:700; }
+  #btn-ready:disabled{ opacity:.6; }
+
   /* --- choix de colonne (mosaïque libre) --- */
   .modal{ position:fixed; inset:0; background:rgba(20,15,5,.55); display:none; align-items:center; justify-content:center; z-index:150; padding:16px; }
   .modal-content{
@@ -121,6 +127,7 @@
   let myGame = null;
   let toastTimer = null;
   let unsubscribe = null;
+  let pendingWrites = 0; // écritures locales en vol — les échos realtime reçus pendant sont périmés
 
   function showToast(msg){
     const el = document.getElementById('toast');
@@ -139,14 +146,86 @@
   }
 
   async function updateMyRow(patch){
-    const { error } = await azulSupabase.from('players').update(patch).eq('id', playerId);
-    if (error){ showToast('Erreur de synchronisation : ' + error.message); console.error(error); }
-    // pas de rendu local ici : le rendu se fait uniquement via l'écho temps réel (voir plan)
+    // Rendu optimiste : le patch est appliqué localement tout de suite. Avant, on attendait l'écho
+    // realtime pour rendre — des taps rapides successifs partaient alors tous du même état pas
+    // encore rafraîchi et des tuiles se perdaient en route.
+    Object.assign(myRow, patch);
+    renderBoard();
+    pendingWrites++;
+    try{
+      const { error } = await azulSupabase.from('players').update(patch).eq('id', playerId);
+      if (error){
+        showToast('Erreur de synchronisation : ' + error.message);
+        console.error(error);
+        await resyncFromServer(); // on repart de l'état serveur plutôt que de garder un état local faux
+      }
+    }finally{
+      pendingWrites--;
+    }
   }
 
-  function addFloorTile(row){ return Math.min(row.floor_filled + 1, FLOOR_PENALTIES.length); }
+  // Recharge l'état complet depuis le serveur — après une erreur d'écriture, et à chaque retour
+  // au premier plan (mobile en veille : la connexion realtime a pu tomber sans aucun événement).
+  async function resyncFromServer(){
+    try{
+      const [game, players] = await Promise.all([fetchGameById(gameId), fetchPlayers(gameId)]);
+      myGame = game;
+      const mine = players.find(p => p.id === playerId);
+      if (mine) myRow = mine;
+      applyGameState();
+    }catch(e){ console.error(e); }
+  }
+
+  function applyGameState(){
+    document.getElementById('round-num').textContent = myGame.current_round;
+    if (myGame.phase === 'ended'){ window.location.href = `spectator.html?game=${gameId}`; return; }
+    checkResolvingWatchdog();
+    renderBoard();
+  }
+
+  // Filet de sécurité : si le client qui a gagné la résolution de manche disparaît entre le claim
+  // et apply_round_results, la partie resterait bloquée en 'resolving' pour toujours. Après 10 s
+  // dans cet état, n'importe quel client débloque (force_unclaim_stuck_round, garde SQL de 8 s)
+  // puis retente la résolution lui-même. Sans danger si plusieurs clients le font en même temps :
+  // le claim est atomique et apply_round_results n'applique qu'exactement une fois.
+  let resolvingWatchdog = null;
+  function checkResolvingWatchdog(){
+    if (myGame.phase === 'resolving' && !resolvingWatchdog){
+      const round = myGame.current_round;
+      resolvingWatchdog = setTimeout(async () => {
+        resolvingWatchdog = null;
+        if (!myGame || myGame.phase !== 'resolving' || myGame.current_round !== round) return;
+        try{
+          await forceUnclaimStuckRound(gameId, round);
+          await attemptRoundResolution(gameId, round);
+        }catch(e){ console.error(e); }
+      }, 10000);
+    } else if (myGame.phase !== 'resolving' && resolvingWatchdog){
+      clearTimeout(resolvingWatchdog);
+      resolvingWatchdog = null;
+    }
+  }
+
+  // Plateau verrouillé une fois "Prêt" (ou pendant la résolution) : une ligne complétée APRÈS le
+  // passage en prêt ne serait couverte par aucun choix de colonne (mosaic_free) et ferait échouer
+  // la résolution chez le client résolveur — et en mur fixe, l'édition serait de toute façon
+  // écrasée par apply_round_results.
+  function boardLocked(){
+    return !!(myRow && myRow.ready) || !!(myGame && myGame.phase === 'resolving');
+  }
+  function guardLocked(){
+    if (!boardLocked()) return false;
+    showToast(myRow.ready ? 'Plateau verrouillé — retire « Prêt » pour modifier.' : 'Résolution de la manche en cours…');
+    return true;
+  }
+
+  function addFloorTile(row){
+    const offset = row.has_first_player_marker ? 1 : 0;
+    return Math.min(row.floor_filled + 1, FLOOR_PENALTIES.length - offset);
+  }
 
   async function tapColor(rowIndex, colorId){
+    if (guardLocked()) return;
     const line = myRow.pattern_lines[rowIndex];
 
     if (line.count === line.capacity && line.color !== null){
@@ -155,14 +234,18 @@
       return;
     }
 
+    // placement interdit par les règles : on bloque (avant, simple toast d'avertissement, et les
+    // tuiles disparaissaient silencieusement en fin de manche)
     if (myGame.game_mode === 'mosaic_free'){
       if (freeWallValidColumns(myRow.wall, rowIndex, colorId).length === 0){
-        showToast(`${COLOR_MAP[colorId].label} n'a plus de colonne valide sur cette ligne du mur.`);
+        showToast(`${COLOR_MAP[colorId].label} n'a plus de colonne valide sur cette ligne — placement interdit.`);
+        return;
       }
     } else {
       const col = wallColumnFor(rowIndex, colorId);
       if (myRow.wall[rowIndex][col] !== null){
-        showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur.`);
+        showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur — placement interdit.`);
+        return;
       }
     }
     const newLines = myRow.pattern_lines.map((l, i) => i !== rowIndex ? l : (
@@ -174,6 +257,7 @@
   }
 
   async function tapSlots(rowIndex){
+    if (guardLocked()) return;
     const line = myRow.pattern_lines[rowIndex];
     if (line.count <= 0) return;
     const newCount = line.count - 1;
@@ -183,20 +267,30 @@
   }
 
   async function tapFloorSlot(i){
-    const newFilled = (i < myRow.floor_filled) ? i : i + 1;
-    await updateMyRow({ floor_filled: newFilled });
+    if (guardLocked()) return;
+    const offset = myRow.has_first_player_marker ? 1 : 0;
+    if (offset && i === 0){
+      // taper la case du jeton = retirer le jeton (équivalent à décocher la case à cocher)
+      await updateMyRow({ has_first_player_marker: false });
+      return;
+    }
+    const rel = i - offset;
+    const newFilled = (rel < myRow.floor_filled) ? rel : rel + 1;
+    await updateMyRow({ floor_filled: Math.min(newFilled, FLOOR_PENALTIES.length - offset) });
   }
 
   async function toggleMarker(checked){
-    if (checked){
-      await updateMyRow({ has_first_player_marker: true, floor_filled: addFloorTile(myRow) });
-    } else {
-      await updateMyRow({ has_first_player_marker: false, floor_filled: Math.max(myRow.floor_filled - 1, 0) });
-    }
+    if (guardLocked()){ renderBoard(); return; }
+    // le jeton n'est plus fusionné dans floor_filled : il occupe visuellement la 1ère case et
+    // compte pour une case au décompte (effectiveFloorCount dans scoring-engine.js) — décocher
+    // ne peut donc plus supprimer une vraie tuile par erreur
+    await updateMyRow({ has_first_player_marker: checked });
   }
 
   function renderBoard(){
     document.getElementById('player-name-header').textContent = myRow.name || 'Azul';
+    const locked = boardLocked();
+    document.getElementById('board').classList.toggle('locked', locked);
 
     const patternHtml = myRow.pattern_lines.map((line, row) => {
       const slots = Array.from({length:line.capacity}, (_, i) => {
@@ -209,7 +303,7 @@
         const disabledHint = isFreeMode
           ? freeWallValidColumns(myRow.wall, row, c.id).length === 0
           : myRow.wall[row][wallColumnFor(row, c.id)] !== null;
-        return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}"></button>`;
+        return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}" ${locked?'disabled':''}></button>`;
       }).join('');
       return `<div class="pattern-row">
         <div class="pl-slots" data-row="${row}">${slots}</div>
@@ -233,16 +327,21 @@
       }).join('')
     ).join('') + `</div>`;
 
+    const markerOffset = myRow.has_first_player_marker ? 1 : 0;
     const floorHtml = `<div class="floor-line">` + FLOOR_PENALTIES.map((pen, i) => {
-      const filled = i < myRow.floor_filled;
+      if (markerOffset && i === 0){
+        return `<div class="floor-slot filled marker" data-idx="0" title="Jeton premier joueur">1er</div>`;
+      }
+      const filled = i < markerOffset + myRow.floor_filled;
       return `<div class="floor-slot ${filled?'filled':''}" data-idx="${i}">${pen}</div>`;
     }).join('') + `</div>
-      <label class="marker-toggle"><input type="checkbox" id="marker-checkbox" ${myRow.has_first_player_marker?'checked':''}/> Jeton premier joueur</label>`;
+      <label class="marker-toggle"><input type="checkbox" id="marker-checkbox" ${myRow.has_first_player_marker?'checked':''} ${locked?'disabled':''}/> Jeton premier joueur (occupe la 1ère case du plancher)</label>`;
 
     document.getElementById('board').innerHTML = `
+      ${locked ? `<p class="lock-note">🔒 Plateau verrouillé ${myRow.ready ? 'tant que tu es « Prêt »' : 'pendant la résolution de la manche'}.</p>` : ''}
       <div class="section-header">
         <h2>Lignes de motifs</h2>
-        <button id="btn-scan-lines">📷 Scanner</button>
+        <button id="btn-scan-lines" ${locked?'disabled':''}>📷 Scanner</button>
       </div>
       ${patternHtml}
       <h2>Mur</h2>
@@ -265,8 +364,15 @@
     document.getElementById('btn-scan-lines').addEventListener('click', () => openScanOverlay());
 
     const btnReady = document.getElementById('btn-ready');
-    btnReady.textContent = myRow.ready ? 'Prêt ✓ (retirer)' : 'Je suis prêt pour cette manche';
-    btnReady.classList.toggle('is-ready', myRow.ready);
+    if (myGame.phase === 'lobby'){
+      btnReady.textContent = "En attente du démarrage par l'hôte…";
+      btnReady.disabled = true;
+      btnReady.classList.remove('is-ready');
+    } else {
+      btnReady.disabled = false;
+      btnReady.textContent = myRow.ready ? 'Prêt ✓ (retirer)' : 'Je suis prêt pour cette manche';
+      btnReady.classList.toggle('is-ready', myRow.ready);
+    }
   }
 
   // Mosaïque libre : si la manche a des lignes de motifs complètes avec plusieurs colonnes encore
@@ -302,6 +408,14 @@
 
   async function onReadyClick(){
     try{
+      if (myGame.phase === 'lobby'){
+        showToast("La partie n'a pas encore démarré.");
+        return;
+      }
+      if (myGame.phase === 'resolving'){
+        showToast('Résolution de la manche en cours…');
+        return;
+      }
       if (myRow.ready){
         await toggleReady(gameId, playerId, false, myGame.current_round);
         return;
@@ -320,8 +434,17 @@
   }
 
   async function onEndGameClick(){
-    if (!confirm('Terminer la partie et calculer les bonus finaux pour tout le monde ?')) return;
     try{
+      // piège classique : taper "Fin de partie" sans avoir résolu la dernière manche — les lignes
+      // complètes et le plancher ne seraient jamais comptés, seuls les bonus s'ajouteraient
+      const rows = await fetchPlayers(gameId);
+      const pending = rows.some(p => p.claimed_by_device_id && (
+        p.pattern_lines.some(l => l.count === l.capacity && l.color !== null) ||
+        p.floor_filled > 0 || p.has_first_player_marker));
+      const msg = pending
+        ? "Attention : la manche en cours n'est pas résolue (lignes complètes ou plancher non comptés). Pour la compter, tout le monde doit d'abord passer « Prêt ». Terminer quand même la partie SANS la compter ?"
+        : 'Terminer la partie et calculer les bonus finaux pour tout le monde ?';
+      if (!confirm(msg)) return;
       await endGame(gameId);
       window.location.href = `spectator.html?game=${gameId}`;
     }catch(e){
@@ -349,6 +472,7 @@
   }
 
   function openScanOverlay(){
+    if (guardLocked()) return;
     scanState = { sourceCanvas: null, corners: null, confirmRows: null, phase: 'triangle', floorResult: null, floorCount: 0, floorAnomaly: false };
     showCalibrateStepForPhase('triangle');
     document.getElementById('scan-overlay').classList.add('open');
@@ -478,8 +602,10 @@
   }
 
   function skipFloorScan(){
+    // "Passer le plancher" conserve l'état actuel au lieu de le remettre à zéro (le scan confirme
+    // l'occupation effective, jeton premier joueur inclus — même convention que la photo)
     scanState.floorResult = null;
-    scanState.floorCount = 0;
+    scanState.floorCount = Math.min(myRow.floor_filled + (myRow.has_first_player_marker ? 1 : 0), FLOOR_PENALTIES.length);
     scanState.floorAnomaly = false;
     showScanStep('scan-step-confirm');
     renderScanConfirm();
@@ -555,7 +681,13 @@
   async function commitScanResult(){
     const newLines = scanState.confirmRows.map((row, i) =>
       ({ capacity: i+1, color: row.count > 0 ? row.color : null, count: row.count }));
-    await updateMyRow({ pattern_lines: newLines, floor_filled: scanState.floorCount });
+    // la photo du plancher compte toutes les cases occupées, y compris le jeton premier joueur
+    // s'il y est posé — floor_filled ne stocke que les tuiles, on retranche donc le jeton
+    const markerOffset = myRow.has_first_player_marker ? 1 : 0;
+    await updateMyRow({
+      pattern_lines: newLines,
+      floor_filled: Math.max(0, scanState.floorCount - markerOffset),
+    });
     closeScanOverlay();
   }
 
@@ -580,27 +712,30 @@
 
   async function init(){
     myGame = await fetchGameById(gameId);
-    document.getElementById('round-num').textContent = myGame.current_round;
-
     const players = await fetchPlayers(gameId);
     myRow = players.find(p => p.id === playerId);
     if (!myRow){
       document.body.innerHTML = '<p style="padding:20px;">Joueur introuvable dans cette partie.</p>';
       return;
     }
-    renderBoard();
+    applyGameState(); // gère aussi une partie déjà terminée (redirection vers le spectateur)
 
     unsubscribe = subscribeToGame(gameId, {
       onGameChange: (g) => {
         myGame = g;
-        document.getElementById('round-num').textContent = g.current_round;
-        if (g.phase === 'ended') window.location.href = `spectator.html?game=${gameId}`;
+        applyGameState();
       },
       onPlayerChange: (eventType, p) => {
         if (p.id !== playerId) return;
+        if (pendingWrites > 0) return; // écho périmé : une écriture locale plus récente est en vol
         myRow = p;
         renderBoard();
       },
+    });
+
+    // au retour au premier plan, la connexion realtime a pu mourir en silence (mobile en veille)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) resyncFromServer();
     });
   }
 

@@ -58,13 +58,24 @@ function sumFloorPenalty(filledCount){
   return FLOOR_PENALTIES.slice(0, filledCount).reduce((s,v) => s+v, 0);
 }
 
+// floorFilled ne compte que les TUILES : le jeton premier joueur occupe une case de plancher en
+// plus au moment du décompte (les deux étaient fusionnés avant, ce qui permettait à un décochage
+// du jeton de "voler" une vraie tuile quand le plancher était déjà plein au moment du cochage).
+function effectiveFloorCount(player){
+  return Math.min(player.floorFilled + (player.hasFirstPlayerMarker ? 1 : 0), FLOOR_PENALTIES.length);
+}
+
 function endRoundForPlayer(player, round){
   const completed = [];
+  const discarded = [];
   let wallScore = 0;
   player.patternLines.forEach((line, row) => {
     if (line.count === line.capacity && line.color !== null){
       const col = wallColumnFor(row, line.color);
       if (player.wall[row][col] !== null){
+        // couleur déjà posée sur cette ligne du mur (ne peut venir que d'un scan mal corrigé :
+        // la saisie manuelle bloque ce placement) — tracé dans l'historique, pas silencieux
+        discarded.push({ row, color: line.color });
         line.color = null; line.count = 0;
         return;
       }
@@ -75,13 +86,13 @@ function endRoundForPlayer(player, round){
       line.color = null; line.count = 0;
     }
   });
-  const floorPenalty = sumFloorPenalty(player.floorFilled);
+  const floorPenalty = sumFloorPenalty(effectiveFloorCount(player));
   player.floorFilled = 0;
   player.hasFirstPlayerMarker = false;
   const rawDelta = wallScore + floorPenalty;
   // le total cumulé ne peut jamais descendre sous 0 (règle officielle) ; on clampe le cumul, pas le delta de la manche
   const newTotal = Math.max(0, player.totalScore + rawDelta);
-  player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed });
+  player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed, discardedLines:discarded });
   player.totalScore = newTotal;
 }
 
@@ -103,8 +114,8 @@ function computeEndGameBonuses(player){
 // ================================================================
 // -- Mosaïque éclatante : additif, ne modifie aucune des fonctions ci-dessus. game_mode :
 // 'base' (défaut), 'mosaic_free' (mur libre, choix de colonne), 'mosaic_a'/'mosaic_b' (mur fixe
-// WALL_PATTERN, ×2 sur 5 cases ou bonus de fin de partie changés). Voir variants/shared/mosaic-data.js
-// et variants/shared/mosaic-free-data.js (mêmes constantes/fonctions, copiées ici pour le multijoueur).
+// WALL_PATTERN, ×2 sur 5 cases ou bonus de fin de partie changés). Les variantes solo qui portaient
+// ces règles ont été supprimées : ce fichier est désormais la seule implémentation de la Mosaïque.
 // ================================================================
 
 const MOSAIC_FACE_A_MULTIPLIER_CELLS = [[0,3],[1,0],[2,2],[3,4],[4,1]];
@@ -124,11 +135,13 @@ function mosaicMultiplierFor(gameMode, row, col){
 // base/mosaic_a/mosaic_b — mosaic_free passe par endRoundForPlayerFreeWall ci-dessous à la place)
 function endRoundForPlayerFixedWall(player, round, gameMode){
   const completed = [];
+  const discarded = [];
   let wallScore = 0;
   player.patternLines.forEach((line, row) => {
     if (line.count === line.capacity && line.color !== null){
       const col = wallColumnFor(row, line.color);
       if (player.wall[row][col] !== null){
+        discarded.push({ row, color: line.color });
         line.color = null; line.count = 0;
         return;
       }
@@ -139,12 +152,12 @@ function endRoundForPlayerFixedWall(player, round, gameMode){
       line.color = null; line.count = 0;
     }
   });
-  const floorPenalty = sumFloorPenalty(player.floorFilled);
+  const floorPenalty = sumFloorPenalty(effectiveFloorCount(player));
   player.floorFilled = 0;
   player.hasFirstPlayerMarker = false;
   const rawDelta = wallScore + floorPenalty;
   const newTotal = Math.max(0, player.totalScore + rawDelta);
-  player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed });
+  player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed, discardedLines:discarded });
   player.totalScore = newTotal;
 }
 
@@ -186,12 +199,14 @@ async function collectFreeWallColumnChoices(player, chooseColumn){
 function endRoundForPlayerFreeWall(player, round, columnChoices){
   const choices = columnChoices || {};
   const completed = [];
+  const discarded = [];
   let wallScore = 0;
   player.patternLines.forEach((line, row) => {
     if (line.count === line.capacity && line.color !== null){
       const validCols = freeWallValidColumns(player.wall, row, line.color);
       let col;
       if (validCols.length === 0){
+        discarded.push({ row, color: line.color });
         line.color = null; line.count = 0;
         return;
       } else if (validCols.length === 1){
@@ -209,12 +224,12 @@ function endRoundForPlayerFreeWall(player, round, columnChoices){
       line.color = null; line.count = 0;
     }
   });
-  const floorPenalty = sumFloorPenalty(player.floorFilled);
+  const floorPenalty = sumFloorPenalty(effectiveFloorCount(player));
   player.floorFilled = 0;
   player.hasFirstPlayerMarker = false;
   const rawDelta = wallScore + floorPenalty;
   const newTotal = Math.max(0, player.totalScore + rawDelta);
-  player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed });
+  player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed, discardedLines:discarded });
   player.totalScore = newTotal;
 }
 
