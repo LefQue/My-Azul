@@ -422,7 +422,8 @@
     ).join('') + `</div>`;
 
     const markerOffset = myRow.has_first_player_marker ? 1 : 0;
-    const floorHtml = `<div class="floor-line">` + FLOOR_PENALTIES.map((pen, i) => {
+    // les faces 1/2 ont leur propre plancher imprimé (avec une case neutre à 0)
+    const floorHtml = `<div class="floor-line">` + floorPenaltiesFor(myGame.game_mode).map((pen, i) => {
       if (markerOffset && i === 0){
         return `<div class="floor-slot filled marker" data-idx="0" title="Jeton premier joueur">1er</div>`;
       }

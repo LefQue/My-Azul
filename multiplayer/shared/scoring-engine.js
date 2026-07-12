@@ -56,8 +56,8 @@ function scoreTilePlacement(wall, row, col){
   return 1;
 }
 
-function sumFloorPenalty(filledCount){
-  return FLOOR_PENALTIES.slice(0, filledCount).reduce((s,v) => s+v, 0);
+function sumFloorPenalty(filledCount, penalties){
+  return (penalties || FLOOR_PENALTIES).slice(0, filledCount).reduce((s,v) => s+v, 0);
 }
 
 // floorFilled ne compte que les TUILES : le jeton premier joueur occupe une case de plancher en
@@ -134,6 +134,14 @@ const MOSAIC_BONUSES = {
   mosaic_a:    { row: 2, col: 7,  color: 10 },
   mosaic_b:    { row: 3, col: 10, color: 12 },
 };
+
+// plancher imprimé sur le plateau des faces 1/2 : une case neutre (0) en 2e position et des
+// pénalités réparties différemment du jeu de base
+const MOSAIC_FLOOR_PENALTIES = [-1, 0, -1, -2, -1, -2, -3];
+
+function floorPenaltiesFor(gameMode){
+  return (gameMode === 'mosaic_a' || gameMode === 'mosaic_b') ? MOSAIC_FLOOR_PENALTIES : FLOOR_PENALTIES;
+}
 
 // couleur imprimée sur la case (row, col) pour ce mode, ou null si case libre
 function mosaicPrintedCellAt(gameMode, row, col){
@@ -281,7 +289,7 @@ function endRoundForPlayerChoiceWall(player, round, gameMode, columnChoices){
       line.color = null; line.count = 0;
     }
   });
-  const floorPenalty = sumFloorPenalty(effectiveFloorCount(player));
+  const floorPenalty = sumFloorPenalty(effectiveFloorCount(player), floorPenaltiesFor(gameMode));
   player.floorFilled = 0;
   player.hasFirstPlayerMarker = false;
   const rawDelta = wallScore + floorPenalty;
