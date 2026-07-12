@@ -139,7 +139,9 @@
 
   /* --- pattern lines --- */
   .pattern-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:9px; }
-  .pl-slots{ display:flex; gap:4px; padding:4px; border-radius:6px; }
+  /* largeur fixe (5 cases + 4 espaces) + alignement à droite : reproduit le plateau physique,
+     où les lignes de motifs sont justifiées côté mur */
+  .pl-slots{ display:flex; gap:4px; padding:4px; border-radius:6px; width:164px; justify-content:flex-end; }
   .pl-slot{
     width:28px; height:28px; border-radius:5px; border:1px solid var(--border); background:var(--bg);
   }
@@ -166,6 +168,11 @@
   }
   .floor-slot:active{ transform:scale(.9); }
   .floor-slot.filled{ background:var(--floor-fill); color:#fdf3e7; border-color:var(--floor-fill); }
+  .floor-slot.marker{ background:var(--gold); border-color:var(--gold); color:#3a2b0d; font-size:.62rem; font-weight:700; }
+  .home-link{
+    display:block; text-align:center; font-size:.78rem; color:var(--muted);
+    text-decoration:none; margin:2px 0 6px;
+  }
   .marker-toggle{ display:flex; align-items:center; gap:8px; margin-top:12px; font-size:.8rem; color:var(--muted); }
 
   .score-line{
@@ -286,7 +293,7 @@
     border-bottom:1px solid var(--border);
   }
   .scan-confirm-row.anomaly{ background:rgba(184,86,47,.12); border-radius:8px; padding:8px; }
-  .scan-confirm-row .scr-slots{ display:flex; gap:4px; }
+  .scan-confirm-row .scr-slots{ display:flex; gap:4px; width:136px; justify-content:flex-end; }
   .scan-confirm-row .scr-slot{ width:24px; height:24px; border-radius:5px; border:1px solid var(--border); background:var(--bg); }
   .scan-confirm-row .scr-palette{ display:flex; gap:4px; }
   .scan-confirm-row .scr-palette button{
@@ -304,6 +311,7 @@
 <div id="app">
 
   <section id="screen-setup" class="screen">
+    <a class="home-link" href="../home.html">← Accueil</a>
     <h1 class="wordmark">Azul<span class="wordmark-sub">Compte-points</span></h1>
     <div class="wordmark-rule"><span></span><span></span><span></span></div>
     <div id="resume-banner" class="tile-card" style="display:none">
@@ -337,6 +345,7 @@
   </section>
 
   <section id="screen-results" class="screen" style="display:none">
+    <a class="home-link" href="../home.html">← Accueil</a>
     <div id="results"></div>
     <button id="btn-new-game">Nouvelle partie</button>
   </section>
@@ -470,11 +479,15 @@
 
   function endRoundForPlayer(player, round){
     const completed = [];
+    const discarded = [];
     let wallScore = 0;
     player.patternLines.forEach((line, row) => {
       if (line.count === line.capacity && line.color !== null){
         const col = wallColumnFor(row, line.color);
         if (player.wall[row][col] !== null){
+          // ne peut venir que d'un scan mal corrigé (la saisie manuelle bloque ce placement) —
+          // tracé dans le résumé de manche, pas silencieux
+          discarded.push({ row, color: line.color });
           line.color = null; line.count = 0;
           return;
         }
@@ -485,13 +498,16 @@
         line.color = null; line.count = 0;
       }
     });
-    const floorPenalty = sumFloorPenalty(player.floorFilled);
+    // le jeton premier joueur occupe une case de plancher en plus au moment du décompte
+    // (floorFilled ne compte que les tuiles, voir marker-checkbox)
+    const effectiveFloor = Math.min(player.floorFilled + (player.hasFirstPlayerMarker ? 1 : 0), FLOOR_PENALTIES.length);
+    const floorPenalty = sumFloorPenalty(effectiveFloor);
     player.floorFilled = 0;
     player.hasFirstPlayerMarker = false;
     const rawDelta = wallScore + floorPenalty;
     // le total cumulé ne peut jamais descendre sous 0 (règle officielle) ; on clampe le cumul, pas le delta de la manche
     const newTotal = Math.max(0, player.totalScore + rawDelta);
-    player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed });
+    player.roundHistory.push({ round, wallScore, floorPenalty, roundDelta:rawDelta, runningTotal:newTotal, completedLines:completed, discardedLines:discarded });
     player.totalScore = newTotal;
   }
 
@@ -600,7 +616,8 @@
 
     const patternHtml = player.patternLines.map((line, row) => {
       const slots = Array.from({length:line.capacity}, (_, i) => {
-        const filled = i < line.count;
+        // remplissage côté mur (bord droit), comme sur le plateau physique
+        const filled = i >= line.capacity - line.count;
         return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}"></div>`;
       }).join('');
       const swatches = COLORS.map(c => {
@@ -624,11 +641,15 @@
       }).join('')
     ).join('') + `</div>`;
 
+    const markerOffset = player.hasFirstPlayerMarker ? 1 : 0;
     const floorHtml = `<div class="floor-line">` + FLOOR_PENALTIES.map((pen, i) => {
-      const filled = i < player.floorFilled;
+      if (markerOffset && i === 0){
+        return `<div class="floor-slot filled marker" data-idx="0" title="Jeton premier joueur">1er</div>`;
+      }
+      const filled = i < markerOffset + player.floorFilled;
       return `<div class="floor-slot ${filled?'filled':''}" data-idx="${i}">${pen}</div>`;
     }).join('') + `</div>
-      <label class="marker-toggle"><input type="checkbox" id="marker-checkbox" ${player.hasFirstPlayerMarker?'checked':''}/> Jeton premier joueur (compte aussi une case de la ligne de plancher)</label>`;
+      <label class="marker-toggle"><input type="checkbox" id="marker-checkbox" ${player.hasFirstPlayerMarker?'checked':''}/> Jeton premier joueur (occupe la 1ère case du plancher)</label>`;
 
     container.innerHTML = `
       <div class="section-header">
@@ -656,19 +677,18 @@
       el.addEventListener('click', () => tapFloorSlot(parseInt(el.dataset.idx,10)));
     });
     document.getElementById('marker-checkbox').addEventListener('change', (e) => {
+      // le jeton n'est plus fusionné dans floorFilled : il occupe visuellement la 1ère case et
+      // compte pour une case au décompte (endRoundForPlayer) — décocher ne peut donc plus
+      // supprimer une vraie tuile par erreur (ex : plancher déjà plein au moment du cochage)
       player.hasFirstPlayerMarker = e.target.checked;
-      if (e.target.checked){
-        addFloorTile(player);
-      } else {
-        player.floorFilled = Math.max(player.floorFilled - 1, 0);
-      }
       saveState();
       renderBoard();
     });
   }
 
   function addFloorTile(player){
-    player.floorFilled = Math.min(player.floorFilled + 1, FLOOR_PENALTIES.length);
+    const offset = player.hasFirstPlayerMarker ? 1 : 0;
+    player.floorFilled = Math.min(player.floorFilled + 1, FLOOR_PENALTIES.length - offset);
   }
 
   function tapColor(rowIndex, colorId){
@@ -684,9 +704,12 @@
       return;
     }
 
+    // placement interdit par les règles : on bloque (avant, simple avertissement, et les tuiles
+    // disparaissaient silencieusement en fin de manche)
     const col = wallColumnFor(rowIndex, colorId);
     if (player.wall[rowIndex][col] !== null){
-      showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur.`);
+      showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur — placement interdit.`);
+      return;
     }
     if (line.color !== null && line.color !== colorId){
       showToast(`Ligne remplacée : ${COLOR_MAP[line.color].label} → ${COLOR_MAP[colorId].label}`);
@@ -713,7 +736,15 @@
 
   function tapFloorSlot(i){
     const player = currentPlayer();
-    player.floorFilled = (i < player.floorFilled) ? i : i + 1;
+    const offset = player.hasFirstPlayerMarker ? 1 : 0;
+    if (offset && i === 0){
+      // taper la case du jeton = retirer le jeton (équivalent à décocher la case à cocher)
+      player.hasFirstPlayerMarker = false;
+    } else {
+      const rel = i - offset;
+      const newFilled = (rel < player.floorFilled) ? rel : rel + 1;
+      player.floorFilled = Math.min(newFilled, FLOOR_PENALTIES.length - offset);
+    }
     saveState();
     renderBoard();
   }
@@ -726,6 +757,8 @@
       // completedLines est déjà dans l'ordre ligne 1 → ligne 5 (ordre de calcul réel)
       const lines = s.completedLines.map(l =>
         `<li>Ligne ${l.row+1} (${COLOR_MAP[l.color].label}) : +${l.points}</li>`
+      ).join('') + (s.discardedLines || []).map(l =>
+        `<li style="color:var(--accent-2)">Ligne ${l.row+1} (${COLOR_MAP[l.color].label}) : défaussée — couleur déjà posée sur le mur</li>`
       ).join('');
       return `<div style="color:var(--text); margin-bottom:12px;"><strong>${escapeHtml(p.name)}</strong>
         ${lines ? `<ul style="margin:4px 0; padding-left:20px;">${lines}</ul>` : '<p style="margin:4px 0;color:var(--muted)">Aucune ligne complétée</p>'}
@@ -741,9 +774,12 @@
     const sorted = [...gameState.players].sort((a,b) =>
       b.totalScore - a.totalScore || (b.finalBonuses?.rows||0) - (a.finalBonuses?.rows||0)
     );
-    const maxScore = sorted[0].totalScore;
+    const top = sorted[0];
     el.innerHTML = `<h1>Résultats finaux</h1>` + sorted.map((p,i) => {
-      const isWinner = p.totalScore === maxScore;
+      // couronne uniquement après le départage officiel (lignes complètes) — un score égal mais
+      // moins de lignes n'est pas une victoire partagée
+      const isWinner = p.totalScore === top.totalScore &&
+        (p.finalBonuses?.rows||0) === (top.finalBonuses?.rows||0);
       const b = p.finalBonuses || { rows:0, cols:0, colors:0, bonusPoints:0 };
       return `<div class="result-row ${isWinner?'winner':''}" style="animation-delay:${i*80}ms">
         <span class="rank">#${i+1}${isWinner?' 👑':''}</span>
@@ -806,7 +842,19 @@
     });
 
     document.getElementById('btn-end-game').addEventListener('click', () => {
-      if (!confirm('Terminer la partie et calculer les bonus finaux ?')) return;
+      // piège classique : finir la partie sans avoir terminé la dernière manche — les lignes
+      // complètes et le plancher ne seraient jamais comptés, seuls les bonus s'ajouteraient
+      const pending = gameState.players.some(p =>
+        p.patternLines.some(l => l.count === l.capacity && l.color !== null) ||
+        p.floorFilled > 0 || p.hasFirstPlayerMarker);
+      if (pending){
+        if (!confirm("La manche en cours n'est pas encore comptée (lignes complètes ou plancher). Elle sera d'abord terminée, puis les bonus finaux calculés. Continuer ?")) return;
+        const round = gameState.currentRound;
+        gameState.players.forEach(p => endRoundForPlayer(p, round));
+        gameState.currentRound += 1;
+      } else {
+        if (!confirm('Terminer la partie et calculer les bonus finaux ?')) return;
+      }
       gameState.players.forEach(computeEndGameBonuses);
       gameState.phase = 'ended';
       saveState();
@@ -1330,7 +1378,8 @@
     el.innerHTML = scanState.confirmRows.map((row, r) => {
       const capacity = r + 1;
       const slots = Array.from({length:capacity}, (_, i) => {
-        const filled = i < row.count;
+        // remplissage côté mur (bord droit), comme sur le plateau réel photographié
+        const filled = i >= capacity - row.count;
         return `<div class="scr-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[row.color].hex)}` : ''}"></div>`;
       }).join('');
       const palette = COLORS.map(c =>
