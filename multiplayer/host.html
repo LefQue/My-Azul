@@ -67,8 +67,8 @@
   const GAME_MODES = [
     { id: 'base', label: 'Jeu de base', desc: 'Mur fixe, règles standard.' },
     { id: 'mosaic_free', label: 'Mosaïque éclatante — libre', desc: 'Mur libre : chaque joueur choisit sa colonne en fin de manche (1 couleur par ligne/colonne).' },
-    { id: 'mosaic_a', label: 'Mosaïque éclatante — Face 1 (×2)', desc: 'Mur fixe standard, 5 cases doublent le score de la pose.' },
-    { id: 'mosaic_b', label: 'Mosaïque éclatante — Face 2 (bonus+)', desc: 'Mur fixe standard, bonus de fin de partie augmentés (+3/+10/+12).' },
+    { id: 'mosaic_a', label: 'Mosaïque éclatante — Face 1 (×2)', desc: 'Mur libre sauf 5 cases imprimées (couleur imposée) qui doublent le score de la pose.' },
+    { id: 'mosaic_b', label: 'Mosaïque éclatante — Face 2 (bonus+)', desc: 'Mur libre sauf 5 cases imprimées (couleur imposée), bonus de fin de partie augmentés (+3/+10/+12).' },
   ];
   let currentGame = null;
   let unsubscribe = null;

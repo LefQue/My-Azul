@@ -19,6 +19,7 @@
       <p>Code de la partie</p>
       <input type="text" id="join-code-input" placeholder="ex: AB12CD" style="text-transform:uppercase;">
       <button id="btn-find-game" class="btn primary" style="margin-top:10px;">Rejoindre</button>
+      <button id="btn-scan-qr" class="btn" style="margin-top:8px;">📷 Scanner le QR code</button>
     </div>
   </section>
 
@@ -36,6 +37,13 @@
 </div>
 <div id="toast" class="toast"></div>
 
+<div id="qr-overlay" style="display:none; position:fixed; inset:0; background:#000; z-index:300; flex-direction:column; padding:calc(12px + var(--safe-t)) 12px calc(12px + var(--safe-b));">
+  <p style="color:#fff; text-align:center; font-size:.85rem; margin:0 0 10px;">Vise le QR code affiché sur l'écran de l'hôte.</p>
+  <video id="qr-video" autoplay playsinline muted style="flex:1; min-height:0; width:100%; object-fit:cover; border-radius:10px;"></video>
+  <button id="btn-qr-cancel" class="btn" style="margin-top:12px; background:#fff;">Annuler</button>
+</div>
+
+<script src="vendor/jsQR.min.js"></script>
 <script src="vendor/supabase-js.min.js"></script>
 <script src="shared/supabase-config.js"></script>
 <script src="shared/scoring-engine.js"></script>
@@ -136,6 +144,66 @@
     window.location.href = `player.html?game=${gameId}&player=${playerId}`;
   }
 
+  // ---------- scan du QR code (caméra + jsQR) ----------
+  let qrStream = null, qrLoopId = null;
+
+  // le QR de l'hôte encode l'URL join.html?game=<code> ; accepte aussi un code brut
+  function extractJoinCode(data){
+    try{
+      const url = new URL(data);
+      const g = new URLSearchParams(url.search).get('game');
+      if (g) return g;
+    }catch(e){ /* pas une URL, on tente le code brut */ }
+    const raw = data.trim();
+    return /^[A-Za-z0-9]{4,10}$/.test(raw) ? raw : null;
+  }
+
+  async function startQrScan(){
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      showToast('Caméra indisponible sur ce navigateur — tape le code à la main.');
+      return;
+    }
+    try{
+      qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    }catch(e){
+      showToast('Accès caméra refusé — tape le code à la main.');
+      return;
+    }
+    const video = document.getElementById('qr-video');
+    video.srcObject = qrStream;
+    document.getElementById('qr-overlay').style.display = 'flex';
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const tick = () => {
+      if (!qrStream) return;
+      if (video.readyState === video.HAVE_ENOUGH_DATA){
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        if (code && code.data){
+          const joinCode = extractJoinCode(code.data);
+          if (joinCode){
+            stopQrScan();
+            document.getElementById('join-code-input').value = joinCode.toUpperCase();
+            findGame();
+            return;
+          }
+        }
+      }
+      qrLoopId = requestAnimationFrame(tick);
+    };
+    qrLoopId = requestAnimationFrame(tick);
+  }
+
+  function stopQrScan(){
+    if (qrLoopId){ cancelAnimationFrame(qrLoopId); qrLoopId = null; }
+    if (qrStream){ qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+    document.getElementById('qr-video').srcObject = null;
+    document.getElementById('qr-overlay').style.display = 'none';
+  }
+
   // Pré-remplit le code si on arrive via le QR (?game=<code>)
   const params = new URLSearchParams(window.location.search);
   const prefilled = params.get('game');
@@ -143,6 +211,8 @@
 
   document.getElementById('btn-find-game').addEventListener('click', findGame);
   document.getElementById('btn-claim').addEventListener('click', claimFlow);
+  document.getElementById('btn-scan-qr').addEventListener('click', startQrScan);
+  document.getElementById('btn-qr-cancel').addEventListener('click', stopQrScan);
 
   window.addEventListener('unhandledrejection', (e) => {
     showToast('Erreur : ' + (e.reason && e.reason.message ? e.reason.message : e.reason));

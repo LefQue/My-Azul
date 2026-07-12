@@ -85,19 +85,20 @@
   }
 
   function renderMiniWall(wall){
-    const isFreeMode = game && game.game_mode === 'mosaic_free';
+    const mode = (game && game.game_mode) || 'base';
     return `<div class="wall-grid mini">` + wall.map((rowArr, r) =>
       rowArr.map((cell, c) => {
-        let style;
-        if (isFreeMode){
-          style = cell !== null ? `background:${tileGloss(COLOR_MAP[cell].hex)}` : '';
+        let style = '';
+        if (cell !== null){
+          style = `background:${tileGloss(COLOR_MAP[cell].hex)}`;
+        } else if (mode === 'base'){
+          style = `background:${hexToRgba(COLOR_MAP[WALL_PATTERN[r][c]].hex,0.16)};`;
         } else {
-          const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
-          style = cell !== null
-            ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
-            : `background:${hexToRgba(patternHex,0.16)};`;
+          // modes Mosaïque : mur libre — seules les cases imprimées (faces 1/2) ont un fantôme
+          const printed = mosaicPrintedCellAt(mode, r, c);
+          if (printed) style = `background:${hexToRgba(COLOR_MAP[printed].hex,0.2)};`;
         }
-        const badge = mosaicMultiplierFor(game && game.game_mode, r, c) === 2 ? `<span class="wall-x2-badge">×2</span>` : '';
+        const badge = mosaicMultiplierFor(mode, r, c) === 2 ? `<span class="wall-x2-badge">×2</span>` : '';
         return `<div class="wall-cell" style="${style}">${badge}</div>`;
       }).join('')
     ).join('') + `</div>`;

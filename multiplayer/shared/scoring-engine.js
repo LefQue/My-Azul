@@ -115,12 +115,19 @@ function computeEndGameBonuses(player){
 
 // ================================================================
 // -- Mosaïque éclatante : additif, ne modifie aucune des fonctions ci-dessus. game_mode :
-// 'base' (défaut), 'mosaic_free' (mur libre, choix de colonne), 'mosaic_a'/'mosaic_b' (mur fixe
-// WALL_PATTERN, ×2 sur 5 cases ou bonus de fin de partie changés). Les variantes solo qui portaient
-// ces règles ont été supprimées : ce fichier est désormais la seule implémentation de la Mosaïque.
+// 'base' (défaut, mur fixe WALL_PATTERN), 'mosaic_free' (mur entièrement libre),
+// 'mosaic_a'/'mosaic_b' (mur libre sauf 5 cases imprimées à couleur imposée — face 1 : ×2 sur
+// ces cases ; face 2 : bonus de fin de partie augmentés). Ce fichier est la seule implémentation.
 // ================================================================
 
-const MOSAIC_FACE_A_MULTIPLIER_CELLS = [[0,3],[1,0],[2,2],[3,4],[4,1]];
+// Faces 1 et 2 : le mur est LIBRE (mêmes règles que mosaic_free) à l'exception de 5 cases
+// imprimées dont la couleur est imposée. [row, col, couleur], 0-indexé.
+// Face 1 : les 5 cases imprimées portent en plus un ×2 sur le score de la pose.
+// Face 2 : pose normale partout, mais bonus de fin de partie augmentés (MOSAIC_BONUSES).
+const MOSAIC_FIXED_CELLS = {
+  mosaic_a: [[0,3,'K'],[1,0,'W'],[2,2,'Y'],[3,4,'B'],[4,1,'R']],
+  mosaic_b: [[1,1,'B'],[1,3,'R'],[2,2,'W'],[3,1,'K'],[3,3,'Y']],
+};
 const MOSAIC_BONUSES = {
   base:        { row: 2, col: 7,  color: 10 },
   mosaic_free: { row: 2, col: 7,  color: 10 },
@@ -128,13 +135,22 @@ const MOSAIC_BONUSES = {
   mosaic_b:    { row: 3, col: 10, color: 12 },
 };
 
-function mosaicMultiplierFor(gameMode, row, col){
-  if (gameMode !== 'mosaic_a') return 1;
-  return MOSAIC_FACE_A_MULTIPLIER_CELLS.some(([r,c]) => r === row && c === col) ? 2 : 1;
+// couleur imprimée sur la case (row, col) pour ce mode, ou null si case libre
+function mosaicPrintedCellAt(gameMode, row, col){
+  const cells = MOSAIC_FIXED_CELLS[gameMode];
+  if (!cells) return null;
+  const hit = cells.find(([r, c]) => r === row && c === col);
+  return hit ? hit[2] : null;
 }
 
-// équivalent de endRoundForPlayer, paramétré par le multiplicateur de mode (mur fixe WALL_PATTERN :
-// base/mosaic_a/mosaic_b — mosaic_free passe par endRoundForPlayerFreeWall ci-dessous à la place)
+// Face 1 : le ×2 est porté par les 5 cases imprimées
+function mosaicMultiplierFor(gameMode, row, col){
+  if (gameMode !== 'mosaic_a') return 1;
+  return mosaicPrintedCellAt('mosaic_a', row, col) ? 2 : 1;
+}
+
+// équivalent de endRoundForPlayer pour le mur fixe WALL_PATTERN (mode 'base' uniquement — tous
+// les modes Mosaïque passent par endRoundForPlayerChoiceWall ci-dessous)
 function endRoundForPlayerFixedWall(player, round, gameMode){
   const completed = [];
   const discarded = [];
@@ -177,19 +193,56 @@ function freeWallValidColumns(wall, row, color){
   return cols;
 }
 
-// Parcourt les lignes de motifs complètes dans le MÊME ORDRE (0 -> 4) que endRoundForPlayerFreeWall
+// Faces 1/2 : mur libre + cases imprimées. Une case imprimée ne peut recevoir QUE sa couleur.
+// Si la case imprimée de `color` est sur cette ligne (encore vide), c'est sa destination
+// obligatoire ; et une colonne contenant la case imprimée (encore vide) de `color` sur une AUTRE
+// ligne lui est réservée — sinon la case imprimée deviendrait définitivement injouable.
+function mosaicWallValidColumns(gameMode, wall, row, color){
+  const fixed = MOSAIC_FIXED_CELLS[gameMode] || [];
+  if (wall[row].includes(color)) return [];
+  const printedHere = fixed.find(([r, c, cc]) => r === row && cc === color);
+  if (printedHere && wall[printedHere[0]][printedHere[1]] === null){
+    const col = printedHere[1];
+    return wall.some(rw => rw[col] === color) ? [] : [col];
+  }
+  const cols = [];
+  for (let col = 0; col < 5; col++){
+    if (wall[row][col] !== null) continue;
+    if (wall.some(r => r[col] === color)) continue;
+    const printed = mosaicPrintedCellAt(gameMode, row, col);
+    if (printed && printed !== color) continue;
+    if (fixed.some(([r, c, cc]) => c === col && cc === color && r !== row && wall[r][c] === null)) continue;
+    cols.push(col);
+  }
+  return cols;
+}
+
+// colonnes valides pour poser `color` sur `row`, selon le mode de jeu
+function wallValidColumnsByMode(gameMode, wall, row, color){
+  if (gameMode === 'mosaic_free') return freeWallValidColumns(wall, row, color);
+  if (gameMode === 'mosaic_a' || gameMode === 'mosaic_b') return mosaicWallValidColumns(gameMode, wall, row, color);
+  const col = wallColumnFor(row, color);
+  return wall[row][col] === null ? [col] : [];
+}
+
+// modes où le joueur choisit la colonne d'arrivée en fin de manche
+function gameModeHasColumnChoice(gameMode){
+  return gameMode === 'mosaic_free' || gameMode === 'mosaic_a' || gameMode === 'mosaic_b';
+}
+
+// Parcourt les lignes de motifs complètes dans le MÊME ORDRE (0 -> 4) que endRoundForPlayerChoiceWall
 // et sur un CLONE du mur, en appelant `chooseColumn(row, color, validCols, workingWall)` (peut être
 // async) uniquement quand plusieurs colonnes sont encore valides. Ne pas précalculer toutes les
 // ambiguïtés sur le mur d'origine : un choix sur une ligne peut invalider une colonne encore "libre"
 // pour une ligne suivante — simuler dans le même ordre garantit que la map renvoyée reste valide
-// telle quelle pour endRoundForPlayerFreeWall.
-async function collectFreeWallColumnChoices(player, chooseColumn){
+// telle quelle pour endRoundForPlayerChoiceWall.
+async function collectColumnChoices(gameMode, player, chooseColumn){
   const workingWall = player.wall.map(row => row.slice());
   const choices = {};
   for (let row = 0; row < player.patternLines.length; row++){
     const line = player.patternLines[row];
     if (line.count !== line.capacity || line.color === null) continue;
-    const validCols = freeWallValidColumns(workingWall, row, line.color);
+    const validCols = wallValidColumnsByMode(gameMode, workingWall, row, line.color);
     if (validCols.length === 0) continue;
     const col = validCols.length === 1 ? validCols[0] : await chooseColumn(row, line.color, validCols, workingWall);
     workingWall[row][col] = line.color;
@@ -198,14 +251,16 @@ async function collectFreeWallColumnChoices(player, chooseColumn){
   return choices;
 }
 
-function endRoundForPlayerFreeWall(player, round, columnChoices){
+// fin de manche pour tous les modes à mur libre (mosaic_free, mosaic_a, mosaic_b) — le ×2 de la
+// face 1 s'applique via mosaicMultiplierFor quand la tuile atterrit sur une case imprimée
+function endRoundForPlayerChoiceWall(player, round, gameMode, columnChoices){
   const choices = columnChoices || {};
   const completed = [];
   const discarded = [];
   let wallScore = 0;
   player.patternLines.forEach((line, row) => {
     if (line.count === line.capacity && line.color !== null){
-      const validCols = freeWallValidColumns(player.wall, row, line.color);
+      const validCols = wallValidColumnsByMode(gameMode, player.wall, row, line.color);
       let col;
       if (validCols.length === 0){
         discarded.push({ row, color: line.color });
@@ -220,7 +275,7 @@ function endRoundForPlayerFreeWall(player, round, columnChoices){
         }
       }
       player.wall[row][col] = line.color;
-      const points = scoreTilePlacement(player.wall, row, col);
+      const points = scoreTilePlacement(player.wall, row, col) * mosaicMultiplierFor(gameMode, row, col);
       wallScore += points;
       completed.push({ row, color: line.color, col, points });
       line.color = null; line.count = 0;
@@ -236,7 +291,7 @@ function endRoundForPlayerFreeWall(player, round, columnChoices){
 }
 
 function endRoundForPlayerByMode(player, round, gameMode, columnChoices){
-  if (gameMode === 'mosaic_free') endRoundForPlayerFreeWall(player, round, columnChoices);
+  if (gameModeHasColumnChoice(gameMode)) endRoundForPlayerChoiceWall(player, round, gameMode, columnChoices);
   else endRoundForPlayerFixedWall(player, round, gameMode);
 }
 

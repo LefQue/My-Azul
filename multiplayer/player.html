@@ -100,6 +100,7 @@
     <div class="scan-actions">
       <button id="btn-scan-cancel-1" class="danger">Annuler</button>
       <button id="btn-scan-skip-floor" style="display:none">Passer le plancher</button>
+      <button id="btn-scan-new-photo" style="display:none">Autre photo</button>
       <button id="btn-scan-validate" class="primary">Valider le cadrage</button>
     </div>
   </div>
@@ -290,22 +291,22 @@
     return Math.min(row.floor_filled + 1, FLOOR_PENALTIES.length - offset);
   }
 
-  // simule la fin de manche sur un clone pour afficher les points en préparation. En Mosaïque
-  // libre le vrai choix de colonne n'a pas encore eu lieu : on prend la première colonne valide
-  // de chaque ligne ambiguë, d'où le « ≈ » affiché dans ce mode.
+  // simule la fin de manche sur un clone pour afficher les points en préparation. Dans les modes
+  // à choix de colonne, le vrai choix n'a pas encore eu lieu : on prend la première colonne valide
+  // de chaque ligne ambiguë, d'où le « ≈ » affiché dans ces modes.
   function previewRound(){
     try{
       const clone = JSON.parse(JSON.stringify(toLegacyPlayerShape(myRow)));
-      if (myGame.game_mode === 'mosaic_free'){
+      if (gameModeHasColumnChoice(myGame.game_mode)){
         const choices = {};
         const wall = clone.wall.map(r => r.slice());
         clone.patternLines.forEach((line, row) => {
           if (line.count === line.capacity && line.color !== null){
-            const cols = freeWallValidColumns(wall, row, line.color);
+            const cols = wallValidColumnsByMode(myGame.game_mode, wall, row, line.color);
             if (cols.length){ choices[row] = cols[0]; wall[row][cols[0]] = line.color; }
           }
         });
-        endRoundForPlayerFreeWall(clone, 0, choices);
+        endRoundForPlayerChoiceWall(clone, 0, myGame.game_mode, choices);
       } else {
         endRoundForPlayerFixedWall(clone, 0, myGame.game_mode);
       }
@@ -324,18 +325,11 @@
     }
 
     // placement interdit par les règles : on bloque (avant, simple toast d'avertissement, et les
-    // tuiles disparaissaient silencieusement en fin de manche)
-    if (myGame.game_mode === 'mosaic_free'){
-      if (freeWallValidColumns(myRow.wall, rowIndex, colorId).length === 0){
-        showToast(`${COLOR_MAP[colorId].label} n'a plus de colonne valide sur cette ligne — placement interdit.`);
-        return;
-      }
-    } else {
-      const col = wallColumnFor(rowIndex, colorId);
-      if (myRow.wall[rowIndex][col] !== null){
-        showToast(`${COLOR_MAP[colorId].label} est déjà posé sur cette ligne du mur — placement interdit.`);
-        return;
-      }
+    // tuiles disparaissaient silencieusement en fin de manche). wallValidColumnsByMode couvre tous
+    // les modes : mur fixe, mur libre et faces 1/2 (cases imprimées).
+    if (wallValidColumnsByMode(myGame.game_mode, myRow.wall, rowIndex, colorId).length === 0){
+      showToast(`${COLOR_MAP[colorId].label} n'a plus de place valide sur cette ligne du mur — placement interdit.`);
+      return;
     }
     const newLines = myRow.pattern_lines.map((l, i) => i !== rowIndex ? l : (
       (l.color !== null && l.color !== colorId)
@@ -387,11 +381,8 @@
         const filled = i >= line.capacity - line.count;
         return `<div class="pl-slot" style="${filled ? `background:${tileGloss(COLOR_MAP[line.color].hex)}` : ''}">${filled ? `<span class="tile-sym">${COLOR_MAP[line.color].symbol}</span>` : ''}</div>`;
       }).join('');
-      const isFreeMode = myGame.game_mode === 'mosaic_free';
       const swatches = COLORS.map(c => {
-        const disabledHint = isFreeMode
-          ? freeWallValidColumns(myRow.wall, row, c.id).length === 0
-          : myRow.wall[row][wallColumnFor(row, c.id)] !== null;
+        const disabledHint = wallValidColumnsByMode(myGame.game_mode, myRow.wall, row, c.id).length === 0;
         return `<button class="swatch ${disabledHint?'disabled-hint':''}" style="background:${tileGloss(c.hex)}" data-row="${row}" data-color="${c.id}" title="${c.label}" ${locked?'disabled':''}><span class="tile-sym">${c.symbol}</span></button>`;
       }).join('');
       return `<div class="pattern-row">
@@ -402,11 +393,8 @@
 
     const wallHtml = `<div class="wall-grid">` + myRow.wall.map((rowArr, r) =>
       rowArr.map((cell, c) => {
-        let style, sym = '';
-        if (myGame.game_mode === 'mosaic_free'){
-          style = cell !== null ? `background:${tileGloss(COLOR_MAP[cell].hex)}` : '';
-          if (cell !== null) sym = `<span class="tile-sym">${COLOR_MAP[cell].symbol}</span>`;
-        } else {
+        let style = '', sym = '';
+        if (myGame.game_mode === 'base'){
           const patternHex = COLOR_MAP[WALL_PATTERN[r][c]].hex;
           style = cell !== null
             ? `background:${tileGloss(COLOR_MAP[cell].hex)}`
@@ -415,9 +403,20 @@
           sym = cell !== null
             ? `<span class="tile-sym">${COLOR_MAP[cell].symbol}</span>`
             : `<span class="tile-sym" style="color:${hexToRgba(patternHex,0.7)}; text-shadow:none;">${COLOR_MAP[WALL_PATTERN[r][c]].symbol}</span>`;
+        } else {
+          // modes Mosaïque : mur libre — seules les cases imprimées (faces 1/2) ont un fantôme
+          const printed = mosaicPrintedCellAt(myGame.game_mode, r, c);
+          if (cell !== null){
+            style = `background:${tileGloss(COLOR_MAP[cell].hex)}`;
+            sym = `<span class="tile-sym">${COLOR_MAP[cell].symbol}</span>`;
+          } else if (printed){
+            const hex = COLOR_MAP[printed].hex;
+            style = `background:${hexToRgba(hex,0.16)}; border:1px dashed ${hexToRgba(hex,0.45)};`;
+            sym = `<span class="tile-sym" style="color:${hexToRgba(hex,0.7)}; text-shadow:none;">${COLOR_MAP[printed].symbol}</span>`;
+          }
         }
         const badge = mosaicMultiplierFor(myGame.game_mode, r, c) === 2 ? `<span class="wall-x2-badge">×2</span>` : '';
-        if (badge) sym = ''; // le badge ×2 recouvre la case, le symbole y serait illisible
+        if (badge && cell !== null) sym = ''; // tuile posée + badge ×2 : le symbole serait illisible dessous
         return `<div class="wall-cell" style="${style}">${sym}${badge}</div>`;
       }).join('')
     ).join('') + `</div>`;
@@ -435,7 +434,7 @@
     // aperçu en direct de la manche en préparation (simulation sur un clone, rien n'est modifié)
     const preview = previewRound();
     const previewHtml = preview && (preview.wallScore !== 0 || preview.floorPenalty !== 0)
-      ? `<p class="round-preview">${myGame.game_mode === 'mosaic_free' ? '≈ ' : ''}Cette manche : mur +${preview.wallScore} · plancher ${preview.floorPenalty} → ${preview.roundDelta >= 0 ? '+' : ''}${preview.roundDelta}</p>`
+      ? `<p class="round-preview">${gameModeHasColumnChoice(myGame.game_mode) ? '≈ ' : ''}Cette manche : mur +${preview.wallScore} · plancher ${preview.floorPenalty} → ${preview.roundDelta >= 0 ? '+' : ''}${preview.roundDelta}</p>`
       : '';
 
     document.getElementById('board').innerHTML = `
@@ -478,11 +477,11 @@
     renderReadyCount();
   }
 
-  // Mosaïque libre : si la manche a des lignes de motifs complètes avec plusieurs colonnes encore
-  // valides, ce joueur les résout lui-même AVANT de passer "Prêt" (jamais un autre appareil à sa
-  // place) — voir collectFreeWallColumnChoices dans shared/scoring-engine.js. Les choix sont écrits
-  // atomiquement avec ready=true (toggleReady) pour qu'aucun autre client ne puisse résoudre la
-  // manche avec des choix partiels.
+  // Modes à mur libre (mosaic_free et faces 1/2) : si la manche a des lignes de motifs complètes
+  // avec plusieurs colonnes encore valides, ce joueur les résout lui-même AVANT de passer "Prêt"
+  // (jamais un autre appareil à sa place) — voir collectColumnChoices dans shared/scoring-engine.js.
+  // Les choix sont écrits atomiquement avec ready=true (toggleReady) pour qu'aucun autre client ne
+  // puisse résoudre la manche avec des choix partiels.
   function showColumnChoiceModal(row, color, validCols, workingWall){
     return new Promise((resolve, reject) => {
       cancelColumnChoice = () => {
@@ -494,8 +493,15 @@
       cellsEl.innerHTML = Array.from({length:5}, (_, c) => {
         const valid = validCols.includes(c);
         const occupied = workingWall[row][c];
-        const style = occupied ? `background:${tileGloss(COLOR_MAP[occupied].hex)}` : '';
-        const sym = occupied ? `<span class="tile-sym">${COLOR_MAP[occupied].symbol}</span>` : '';
+        const printed = !occupied && mosaicPrintedCellAt(myGame.game_mode, row, c);
+        let style = '', sym = '';
+        if (occupied){
+          style = `background:${tileGloss(COLOR_MAP[occupied].hex)}`;
+          sym = `<span class="tile-sym">${COLOR_MAP[occupied].symbol}</span>`;
+        } else if (printed){
+          style = `background:${hexToRgba(COLOR_MAP[printed].hex,0.2)};`;
+          sym = `<span class="tile-sym" style="color:${hexToRgba(COLOR_MAP[printed].hex,0.7)}; text-shadow:none;">${COLOR_MAP[printed].symbol}</span>`;
+        }
         return `<button class="col-choice-cell ${valid?'valid':'invalid'}" data-col="${c}" style="${style}" ${valid?'':'disabled'}>${sym}</button>`;
       }).join('');
       cellsEl.querySelectorAll('.col-choice-cell.valid').forEach(btn => {
@@ -527,9 +533,9 @@
         return;
       }
       let pendingColumnChoices = undefined;
-      if (myGame.game_mode === 'mosaic_free'){
+      if (gameModeHasColumnChoice(myGame.game_mode)){
         const player = toLegacyPlayerShape(myRow);
-        pendingColumnChoices = await collectFreeWallColumnChoices(player, showColumnChoiceModal);
+        pendingColumnChoices = await collectColumnChoices(myGame.game_mode, player, showColumnChoiceModal);
       }
       await toggleReady(gameId, playerId, true, myGame.current_round, pendingColumnChoices);
       myRow.ready = true; // mise à jour optimiste, l'écho realtime confirmera
@@ -591,13 +597,15 @@
     if (phase === 'floor'){
       document.querySelector('#scan-step-calibrate .scan-title').textContent = 'Cadrer la ligne de plancher';
       document.querySelector('#scan-step-calibrate .scan-hint').textContent =
-        "Prends une nouvelle photo de la ligne de plancher (les 7 cases de pénalité), puis place les 4 repères sur ses coins : d'abord les 2 coins de gauche, puis les 2 coins de droite.";
+        "Sur la même photo, place les 4 repères sur les coins de la ligne de plancher (les 7 cases de pénalité). Si elle n'est pas visible sur la photo, prends-en une autre ou passe cette étape.";
       document.getElementById('btn-scan-skip-floor').style.display = '';
+      document.getElementById('btn-scan-new-photo').style.display = '';
     } else {
       document.querySelector('#scan-step-calibrate .scan-title').textContent = 'Cadrer les lignes de motifs';
       document.querySelector('#scan-step-calibrate .scan-hint').textContent =
-        "Place les 4 repères sur les coins du triangle : d'abord les 2 coins côté ligne courte, puis les 2 coins côté ligne longue (celle proche du mur).";
+        "Cadre la photo pour y voir les lignes de motifs ET la ligne de plancher. Place les 4 repères sur les coins du triangle : d'abord les 2 coins côté ligne courte, puis les 2 coins côté ligne longue (celle proche du mur).";
       document.getElementById('btn-scan-skip-floor').style.display = 'none';
+      document.getElementById('btn-scan-new-photo').style.display = 'none';
     }
   }
 
@@ -636,7 +644,11 @@
     const rect = document.getElementById('scan-canvas').getBoundingClientRect();
     const wrapRect = wrap.getBoundingClientRect();
     const offX = rect.left - wrapRect.left, offY = rect.top - wrapRect.top;
-    const insets = [[.22,.15],[.78,.15],[.78,.9],[.22,.9]];
+    // en phase plancher, les repères par défaut se placent sur le bas de la photo (la ligne de
+    // plancher est sous le triangle sur le plateau physique)
+    const insets = scanState.phase === 'floor'
+      ? [[.12,.76],[.88,.76],[.88,.92],[.12,.92]]
+      : [[.22,.15],[.78,.15],[.78,.9],[.22,.9]];
     scanState.corners = insets.map(([fx,fy]) => ({ x: offX + fx*rect.width, y: offY + fy*rect.height }));
     scanState.corners.forEach((pt, i) => {
       const el = document.getElementById('scan-handle-' + i);
@@ -678,6 +690,15 @@
   }
 
   function validateScanCalibration(){
+    // le CNN sert maintenant aux deux phases (lignes de motifs ET plancher)
+    if (!cnnModel){
+      showToast(cnnModelError
+        ? "Modèle CNN introuvable — réessaie via le badge en haut de l'écran."
+        : "Modèle CNN en cours de chargement, réessaie dans un instant.");
+      closeScanOverlay();
+      return;
+    }
+
     const canvas = scanState.sourceCanvas;
     const photoPts = photoPointsFromHandles(canvas);
     const ctx = canvas.getContext('2d');
@@ -693,20 +714,13 @@
       return;
     }
 
-    if (!cnnModel){
-      showToast(cnnModelError
-        ? "Modèle CNN introuvable — réessaie via le badge en haut de l'écran."
-        : "Modèle CNN en cours de chargement, réessaie dans un instant.");
-      closeScanOverlay();
-      return;
-    }
-
     const H = solveHomography(SCAN_CANONICAL_PTS, photoPts);
     scanState.confirmRows = runScanPipeline(imageData, H);
+    // phase plancher sur la MÊME photo : pas de nouvelle prise de vue, on repositionne juste
+    // les repères sur le bas de l'image (bouton « Autre photo » disponible si besoin)
     scanState.phase = 'floor';
     showCalibrateStepForPhase('floor');
-    showScanStep('scan-step-calibrate');
-    document.getElementById('scan-file-input').click();
+    placeDefaultHandles();
   }
 
   function skipFloorScan(){
@@ -807,11 +821,17 @@
     wireScanHandleDragging();
     document.getElementById('btn-scan-validate').addEventListener('click', validateScanCalibration);
     document.getElementById('btn-scan-retake').addEventListener('click', () => {
+      // reprendre depuis le début : nouvelle photo, phase triangle
+      scanState.phase = 'triangle';
+      showCalibrateStepForPhase('triangle');
       showScanStep('scan-step-calibrate');
       document.getElementById('scan-file-input').click();
     });
     document.getElementById('btn-scan-confirm').addEventListener('click', commitScanResult);
     document.getElementById('btn-scan-skip-floor').addEventListener('click', skipFloorScan);
+    document.getElementById('btn-scan-new-photo').addEventListener('click', () => {
+      document.getElementById('scan-file-input').click();
+    });
     document.getElementById('btn-scan-cancel-1').addEventListener('click', closeScanOverlay);
     document.getElementById('btn-scan-cancel-2').addEventListener('click', closeScanOverlay);
     document.getElementById('btn-cnn-retry').addEventListener('click', () =>
